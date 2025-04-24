@@ -1,0 +1,69 @@
+infostring: 'TEST_'
+
+simulations_savedir: '/Users/vatsalpanwar/sterster/example_outputs/'
+
+phoenix_model_dir: '/Users/vatsalpanwar/sterster/inputs/phoenix/'
+model_resolution_working: 200000
+time_range: [-2.,2.] ## in hours
+time_step: 30. ## in seconds
+time_stamps: [0.] ### set this to None if you want to use the time_range and time_step to generate the time stamps. Otherwise, set this to a list of time stamps in hours.
+
+instrument:
+  name: igrins
+  resolution: 45000
+  wavelength_min: 1300.
+  wavelength_max: 2500.
+  wavelength_spacing: R ### constant resolving power
+  wavelength_unit: 'nm'
+
+star:
+  teff: 5000
+  log_g: 4.00
+  met: 0.0
+  model_flux_fname: 'lte05000-4.00-0.0.PHOENIX-ACES-AGSS-COND-2011-HiRes.fits'
+  model_wave_fname: 'WAVE_PHOENIX-ACES-AGSS-COND-2011.fits'
+  model_type: 'phoenix'
+
+  rstar: 1.
+  nside: 256
+
+
+  tile_width: 0.02
+  subtile_width: 0.001
+  inc: 45.
+  v_eq: 3.5
+  alpha: 0.
+  u1: 0.5507
+  u2: 0.1361
+  LD: 'quadratic_phoenix' ## this will override u1 and u2 values. Set to quadratic_self if you want to use self defined LD coefficients.
+  # LD: 'uniform' ## No limb darkening.
+
+planet:
+  pl_orbper: 2.218577
+  transit_duration: 1.84 ## in hours
+  pl_inc: 85.690
+  pl_omega: 0.
+  pl_ecc: 0.
+  pl_T0: 0.
+  pl_Rp: 0.1504 ## in units of Rstar
+  pl_obliquity: 0. #np.pi/2,
+  pl_a: 8.73 ## in units of Rstar
+
+spot:
+  sp_teff: 4200.
+  log_g: 4.00
+  met: 0.0
+  model_flux_fname: 'lte04200-4.00-0.0.PHOENIX-ACES-AGSS-COND-2011-HiRes.fits'
+  model_wave_fname: 'WAVE_PHOENIX-ACES-AGSS-COND-2011.fits'
+  model_type: 'phoenix'
+  
+  sp_contrast: 1. ## from 0 to 1, fraction of how luminous the spot is as compared to the stellar luminosity. 
+  sp_contrast_for_plot: 1.
+  sp_long0: 0. ## Starting point for the longitude of the spot from which the spot will start to rotate.
+  # 'sp_lat' : 2.*np.pi/3, # 3.*np.pi/4,   ### pi is North pole, pi/2 is equator  
+  sp_lat: -90.
+  sp_rad: 0.14 ## Radius of the spot, relative to stellar radius.
+  sp_cb_sup: 300. # in m/s
+  u1: 0.5507
+  u2: 0.1361
+  LD: 'quadratic_phoenix' ## this will override u1 and u2 values. Set to quadratic_self if you want to use self defined LD coefficients.
