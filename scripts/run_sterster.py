@@ -6,7 +6,7 @@ import argparse
 import yaml
 import sys
 sys.path.append('/Users/vatsalpanwar/sterster/sterster/')
-from sterster import grid
+from plastar import grid
 
 SMALL_SIZE = 20
 MEDIUM_SIZE = 25
