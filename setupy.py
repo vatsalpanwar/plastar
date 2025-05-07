@@ -1,16 +1,16 @@
 from setuptools import setup
 
 setup(
-    name='sterster',
+    name='plastar',
     version='0.0.1',    
-    description='Construct a stellar grid using HEALpy.',
-    url='https://github.com/vatsalpanwar/sterster',
+    description='Computing high-resolution time-series of stellar spectrum with a transiting or eclipsing planet. Built upon spotter that uses the HEALPix subdivision scheme.',
+    url='https://github.com/vatsalpanwar/plastar',
     author='Vatsal Panwar',
     author_email='panvatsal@gmail.com',
     license='MIT License',
     packages=['sterster'],
     install_requires=['numpy', 'astropy', 'scipy', 
-                      'matplotlib', 'tqdm', 'pyyaml', 'healpy'          
+                      'matplotlib', 'tqdm', 'pyyaml', 'healpy', 'spotter'          
                       ],
 
     classifiers=[
