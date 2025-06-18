@@ -10,6 +10,8 @@ sys.path.append('/Users/vatsalpanwar/source/work/astro/projects/Warwick/code/pla
 from plastar import grid
 from astropy.io import fits
 from spotter import show
+import astropy.constants as const
+import astropy.units as un
 
 SMALL_SIZE = 20
 MEDIUM_SIZE = 25
@@ -117,6 +119,10 @@ star_grid = grid.StellarGrid(star_dict = star_dict, spots_and_faculae_dict = spo
 #                                     # spot_spectra = np.array([flux_slice_spot]),
 #                                      include_spots_and_faculae = True)
 # star_grid.plot_star_grid(star)
+
+
+print('Resolution of the model: ', (star_grid.star.resolution * star_dict['Rs'] * const.R_sun).to(un.m) )
+
 n = 3
 fig, axes = plt.subplots(2, n, figsize=(8, 2.5))
 phases = jnp.linspace(jnp.pi / 2, -jnp.pi / 2, n)
@@ -132,9 +138,9 @@ for i, phase in enumerate(phases):
     star, spotty_spectrum = star_grid.get_spectral_time_series(time=time, stellar_spectrum = flux_model_star, 
                                                          spot_spectra = flux_model_spot, include_spots_and_faculae = True)
     
-    ax.plot(spotty_spectrum, c="k", lw=1, label="spotted")
-    ax.plot(nonspotted_spectrum, "-", c="r", lw=1, label="non-spotted")
-    ax.axis("off")
+    ax.plot(wavsoln_model_star, spotty_spectrum, c="k", lw=1, label="spotted")
+    ax.plot(wavsoln_model_star, nonspotted_spectrum, "-", c="r", lw=1, label="non-spotted")
+    # ax.axis("off")
 
     ax = axes[0, i]
     show(star, phase, ax=ax)
