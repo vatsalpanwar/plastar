@@ -1,0 +1,19 @@
+[project]
+name = "plastar"
+version = "0.0.1"
+description = "Computing high-resolution time-series of stellar spectrum with a transiting or eclipsing planet. Built upon spotter that uses the HEALPix subdivision scheme."
+authors = [{ name = "Vatsal Panwar" }]
+license = "MIT"
+readme = "readme.md"
+requires-python = ">=3.10"
+dependencies = ['numpy', 'astropy', 'scipy', 'matplotlib', 'tqdm', 'pyyaml', 'healpy', 'spotter'  ]
+
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["plastar"]
+
+[tool.hatch.metadata]
+allow-direct-references = true

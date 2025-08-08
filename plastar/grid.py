@@ -6,11 +6,19 @@ import healpy as hp
 import jax
 from ldtk import LDPSetCreator, BoxcarFilter
 from spotter import Star, show, core
-from spotter.doppler import spectrum
+from spotter.doppler import spectrum, transit_spectrum
 from astropy import units as un
 import jax.numpy as jnp
 import copy
+
+from jaxoplanet.orbits.keplerian import Central, Body, System
+from jaxoplanet.orbits import TransitOrbit
+from spotter.light_curves import transit_design_matrix, transit_light_curve
+from spotter.star import Star, transited_star
+
+# from plastar.planet import Planet
 # from healpy.rotator import rotateVector
+
 
 class StellarGrid:
     
@@ -24,8 +32,8 @@ class StellarGrid:
         """
         self.star_dict = kwargs.pop('star_dict')
         include_planet = kwargs.pop('include_planet', False)
-        
         self.include_planet = include_planet
+        
         include_spots_and_faculae = kwargs.pop('include_spots_and_faculae', False)
         self.include_spots_and_faculae = include_spots_and_faculae
         
@@ -70,18 +78,6 @@ class StellarGrid:
             self.spot_log_g_array = np.float32(np.array(self.spots_and_faculae_dict['log_g'])) ## in cgs
             self.spot_met_array = np.float32(np.array(self.spots_and_faculae_dict['met'])) ## in cgs
 
-            # self.sp_contrast = self.spot_dict['sp_contrast']
-            # self.sp_contrast_for_plot = self.spot_dict['sp_contrast_for_plot']
-            # self.sp_long0 = self.spot_dict['sp_long0']* (np.pi/180.) ## in radians
-            # self.sp_lat = self.spot_dict['sp_lat'] * (np.pi/180.)
-            # self.sp_rad = self.spot_dict['sp_rad']
-                        
-            # self.sp_teff = self.spot_dict['sp_teff']
-            # self.sp_cb_sup = self.spot_dict['sp_cb_sup'] ## Relative suppression in the convective blueshift of the spot as compared to the photosphere. In m/s.
-            
-            # ####### Fix spot log_g and metallicity to the stellar values for now, so the only difference in the limb darkening comes from the difference in Teff 
-            # self.sp_log_g = self.log_g
-            # self.sp_met = self.met
             self.LD_coeffs_spot = []
             
             for ihet in range(self.N_het):
@@ -100,13 +96,59 @@ class StellarGrid:
                     self.LD_coeffs_spot.append( np.array( [self.cq_spot[0], self.cq_spot[1]] ) )
         
         
-
+        if self.include_planet:
+            self.planet_dict = kwargs.pop('planet_dict')
+            self.planet_orb_per = self.planet_dict['orbper']
+            self.planet_impact_param = self.planet_dict['impact_param']
+            self.planet_radius = self.planet_dict['Rp_by_Rs'] * self.star_dict['Rs'] ## convert the planet Radius in terms of solar radius.
+            
+            self.body = Body(time_transit=0.0, period=1.0, radius=self.planet_radius,
+                        impact_param=self.planet_impact_param)
+            self.system = System().add_body(self.body)
+            
+        
+        
         self.star = Star.from_sides(self.nside, 
                                inc = self.star_inc,
                                period = self.star_period.value,
                                u=(self.LD_coeffs_star[0], self.LD_coeffs_star[1]) )
+        ####### Testing the case for None period 
+        # self.star = Star.from_sides(self.nside, 
+        #                 inc = self.star_inc,
+        #                 period = None,
+        #                 u=(0,0) )
+            
+    def planet_coords(self, time):
+        """Calculate the XYZ position of the planet coordinates for each time stamp.
+
+        :param time: _description_
+        :type time: _type_
+        :return: _description_
+        :rtype: _type_
+        """
+        xos, yos, zos = self.system.relative_position(time)
+        x = xos[0] / self.system.central.radius
+        y = yos[0] / self.system.central.radius
+        z = zos[0] / self.system.central.radius
+        return x, y, z
+    
+    def flux_model(self, star, time):
         
         
+        coords = self.planet_coords(time)
+        
+        # flux = jax.vmap(
+        #     lambda coords, time: transit_light_curve(star, *coords, r=self.planet_radius, 
+        #                                              time=time, normalize = False)
+        # )(coords, time).T[0]
+        flux = jax.vmap(
+            lambda coords, time: transit_light_curve(star, *coords, r=self.planet_radius, 
+                                                     time=time, normalize = False)
+        )(coords, time).T
+        
+        return flux
+    
+    
     def plot_star_grid(self, star_grid = None):
         """
         Plot the stellar grid based on the input parameters.""" 
@@ -116,30 +158,10 @@ class StellarGrid:
             
     def set_spectral_values(self, stellar_spectrum = None, spot_spectra = None, include_spots_and_faculae = False):
         
-        # if includes_spots_and_faculae:
-        #     assert(spot_spectra.shape == (self.N_het, len(self.wavsoln)))
-            
-        #     spots = []
-        #     base_star = self.star
-        #     for ihet in range(self.N_het):
-        #         spot = core.spot(self.star.sides, self.spot_lat_array[ihet], self.spot_lon_array[ihet], self.spot_radius_array[ihet], sharpness = 20 ) 
-        #         spots.append(spot)
-
-            
-        #     stellar_spectrum = jnp.array(stellar_spectrum)
-        #     spot_spectra = jnp.array(spot_spectra)
-        #     ##### Set the spectrum of the unspotted part of the stellar spectrum 
-        #     spectra = (base_star.y - spots[0]) * stellar_spectrum[:, None]
-        #     spectra = spectra + spots[0][None,:] * spot_spectra[0][:, None]
-            
-        #     # for ihet in range(self.N_het):
-        #     #     spectra = spectra + spots[ihet][None,:] * spot_spectra[ihet][:, None]
-            
-        #     star = base_star.set(y = spectra, wv = 1e-9 * self.wavsoln)
-        # return star
         if include_spots_and_faculae:
             assert(spot_spectra.shape == (self.N_het, len(self.wavsoln)))
             
+            # Define all the spot objects first and create a list of them 
             spots = []
             base_star = self.star
             for ihet in range(self.N_het):
@@ -147,37 +169,24 @@ class StellarGrid:
                 spots.append(spot)
 
             
-            
             stellar_spectrum = jnp.array(stellar_spectrum)
             spot_spectra = jnp.array(spot_spectra)
             
-            # for isp, sp in enumerate(spots):
-                # base_star.set(y = base_star.y - sp)
-            
-            # # import pdb; pdb.set_trace()
-            
-            # ##### Set the spectrum of the unspotted part of the stellar spectrum 
-            # base_star_y_copy = copy.deepcopy(base_star.y)
-            # for isp, sp in enumerate(spots):
-            #     base_star_y_copy = base_star_y_copy - sp
-            # import pdb; pdb.set_trace()
-            
-            # base_star.set(y = base_star_y_copy)
-            
+            # Set the base_star with the base stellar spectrum
             spectra = base_star.y * stellar_spectrum[:, None]
-            # star = base_star.set(y = spectra, wv = 1e-9 * self.wavsoln)
-            
+                        
+            # Compute the spectrum to be assigned for the points where there are spots. Subtract the stellar spectrum for these points as that has already been assigned to these points before. 
             for isp, sp in enumerate(spots):
                 spectra = spectra + sp[None,:] * (spot_spectra[isp][:, None] - stellar_spectrum[:, None])
             
-            # # # for ihet in range(self.N_het):
-            # # #     spectra = spectra + spots[ihet][None,:] * spot_spectra[ihet][:, None]
             
             star = base_star.set(y = spectra, wv = 1e-9 * self.wavsoln)
+            
         else:
             base_star = self.star
             spectra = base_star.y * stellar_spectrum[:, None]
             star = base_star.set(y = spectra, wv = 1e-9 * self.wavsoln)
+        
         return star
     
     def get_spectral_time_series(self, time=None, stellar_spectrum = None, spot_spectra = None, include_spots_and_faculae = False):
@@ -193,4 +202,12 @@ class StellarGrid:
         - spectrum: The spectral time series.
         """
         star = self.set_spectral_values(stellar_spectrum = stellar_spectrum, spot_spectra = spot_spectra, include_spots_and_faculae = include_spots_and_faculae)
-        return star, spectrum(star, time)
+        
+        
+        if self.include_planet:
+            x, y, z = self.planet_coords(time)
+            return star, transit_spectrum(star, time, x, y, z, self.planet_radius, normalize = False)
+        else:
+            return star, spectrum(star, time, normalize = False)
+        # return star, spectrum(star, time, normalize = False)
+    

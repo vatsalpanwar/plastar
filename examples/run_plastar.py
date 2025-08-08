@@ -6,12 +6,13 @@ import argparse
 import yaml
 import sys
 import jax.numpy as jnp
-sys.path.append('/Users/vatsalpanwar/source/work/astro/projects/Warwick/code/plastar/')
+# sys.path.append('/Users/vatsalpanwar/source/work/astro/projects/Warwick/code/plastar/')
 from plastar import grid
 from astropy.io import fits
 from spotter import show
 import astropy.constants as const
 import astropy.units as un
+import time
 
 SMALL_SIZE = 20
 MEDIUM_SIZE = 25
@@ -77,12 +78,14 @@ lam = np.logspace(np.log(lam_min),np.log(lam_max),num = int(num_vals)+1,endpoint
 lam_nm = lam*1e9
 
 """Load the PHOENIX models for the star."""
+R_solar_squared = 6.957e8*6.957e8 ## in m2
 star_teff, star_log_g, star_met = star_dict['teff'], star_dict['log_g'], star_dict['met']
 flux_model_star_path = config_dd['phoenix_model_dir'] + f'lte0{star_teff}-{star_log_g}-{star_met}.PHOENIX-ACES-AGSS-COND-2011-HiRes.fits'
 wavsoln_model_star_path = config_dd['phoenix_model_dir'] + 'WAVE_PHOENIX-ACES-AGSS-COND-2011.fits'
 
 wavsoln_model_star = fits.getdata(wavsoln_model_star_path)/10.
-flux_model_star = fits.getdata(flux_model_star_path)* 1e-7 * 1e4 * 1e2/np.pi
+flux_model_star = fits.getdata(flux_model_star_path)* 1e-7 * 1e4 * 1e2 * R_solar_squared/np.pi
+# flux_model_star = fits.getdata(flux_model_star_path)* 1e-7 * 1e4 * 1e2
 
 """Load the PHOENIX models for the spots and faculae."""
 wavsoln_model_spot_path = config_dd['phoenix_model_dir'] + 'WAVE_PHOENIX-ACES-AGSS-COND-2011.fits'
@@ -95,7 +98,8 @@ for isp in range(len(spots_and_faculae_dict['teff'])):
 wavsoln_model_spot = fits.getdata(wavsoln_model_spot_path)/10.
 flux_model_spot = []
 for isp in range(len(config_dd['spots_and_faculae']['teff'])):
-    flux_model_spot.append(fits.getdata(flux_model_spot_path_list[isp])* 1e-7 * 1e4 * 1e2/np.pi)
+    flux_model_spot.append(fits.getdata(flux_model_spot_path_list[isp])* 1e-7 * 1e4 * 1e2* R_solar_squared/np.pi)
+    # flux_model_spot.append(fits.getdata(flux_model_spot_path_list[isp])* 1e-7 * 1e4 * 1e2)
 flux_model_spot = np.array(flux_model_spot)
  
 wav_inds_star = [ np.argmin(abs(wavsoln_model_star-lam_nm[0])) , np.argmin(abs(wavsoln_model_star-lam_nm[-1])) ]
@@ -124,11 +128,16 @@ star_grid = grid.StellarGrid(star_dict = star_dict, spots_and_faculae_dict = spo
 print('Resolution of the model: ', (star_grid.star.resolution * star_dict['Rs'] * const.R_sun).to(un.m) )
 
 n = 3
-fig, axes = plt.subplots(2, n, figsize=(8, 2.5))
+fig, axes = plt.subplots(2, n, figsize=(25, 15))
 phases = jnp.linspace(jnp.pi / 2, -jnp.pi / 2, n)
 time_0 = phases[0] * star_grid.star.period / (2 * jnp.pi)
+
+start = time.time()
 _, nonspotted_spectrum = star_grid.get_spectral_time_series(time=time_0, stellar_spectrum = flux_model_star, 
                                                          spot_spectra = flux_model_spot, include_spots_and_faculae = False)
+end = time.time()
+print('Time for calculating the spectral sequence: ', end - start)
+
 
 
 for i, phase in enumerate(phases):
@@ -141,10 +150,14 @@ for i, phase in enumerate(phases):
     ax.plot(wavsoln_model_star, spotty_spectrum, c="k", lw=1, label="spotted")
     ax.plot(wavsoln_model_star, nonspotted_spectrum, "-", c="r", lw=1, label="non-spotted")
     # ax.axis("off")
-
+    ax.set_xlabel('Wavelength [nm]')
+    ax.set_ylabel('Flux')
+    
     ax = axes[0, i]
     show(star, phase, ax=ax)
 
     if i == n - 1:
         plt.legend()
-plt.show()
+    
+
+plt.savefig(savedir + 'outputs.png', dpi = 300, format = 'png')
