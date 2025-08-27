@@ -1,0 +1,20 @@
+infostring: 'TEST_emission_'
+
+simulations_savedir: '/home/astro/phsprd/code/plastar/examples/emission/results/'
+
+time_step: 300. ## in seconds, including the overheads.
+time_stamps: None # [0.] ### set this to None if you want to use the time_range and time_step to generate the time stamps. Otherwise, set this to a list of time stamps in hours.
+phase_range: [0.38, 0.4]
+planet_phase_at_star_phase0: 0.38 # 0.37 ## Difference between the phase = 0 of the star's own rotation and the planet's mid-transit, in units of planetary orbital phase.  
+wavelength_chunk_length: 500 # 100
+wavelength_overlap_length: 50
+# wavelength_chunk_length: null # 100
+# wavelength_overlap_length: null
+
+instrument:
+  name: igrins
+  resolution: 45000
+  wavelength_min: 1960.
+  wavelength_max: 2460. ##
+  wavelength_spacing: R ### constant resolving power
+  wavelength_unit: 'nm'
