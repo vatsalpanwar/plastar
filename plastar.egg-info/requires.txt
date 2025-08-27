@@ -1,8 +1,0 @@
-numpy
-astropy
-scipy
-matplotlib
-tqdm
-pyyaml
-healpy
-spotter
