@@ -1,2 +1,2 @@
-plastar is under-development JAX based framework to model spatially resolved spectra of planet + star systems.
+plastar is under-development JAX based framework to model spatially resolved spectra of planet + star systems for high-resolution cross-correlation spectroscopy.
 Based on [spotter](https://github.com/lgrcia/spotter) and modules from [crocodel](https://github.com/vatsalpanwar/crocodel).
