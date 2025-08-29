@@ -15,6 +15,7 @@ import time
 from tqdm import tqdm
 import imageio.v2 as imageio # Use imageio.v2 for the current API
 from shutil import copyfile
+from scipy import interpolate
 from expecto import get_spectrum
 
 
@@ -218,3 +219,35 @@ def merge_chunks_back(chunks, chunk_length, overlap_length):
 # Example usage
 # merged_arr = merge_chunks_back(chunks, chunk_length=4, overlap=2)
 # print("\nMerged Array:", merged_arr)
+def doppler_shift_wavsoln(wavsoln=None, velocity=None):
+    """
+    This function applies a Doppler shift to a 1D array of wavelengths.
+    wav_obs = wav_orig (1. + velocity/c) where if velocity is positive it corresponds to a redshift
+    (i.e. source moving away from you, so wavelength solution gets shifted towards positive direction) and vice versa
+    for a negative velocity corresponding to blueshift i.e. source moving towards you.
+
+    :param wavsoln: 1D array if wavelengths, ideally in nanometers.
+    :type wavsoln: array_like
+    
+
+    :param velocity: Float value of the velocity of the source, in km/s. Note that the astropy value of speed of light (c) is
+    in m/s.
+    :type velocity: float64
+
+    :return: Doppler shifted wavelength solution.
+    :rtype: array_like
+    """
+    wavsoln_doppler = wavsoln * (1. + (1000. * velocity) / 299792458.0)
+    return wavsoln_doppler
+
+def create_doppler_shifted_sequence(spectrum = None, wavelength = None, rv_array = None):
+    model_spl = interpolate.make_interp_spline(wavelength, spectrum, bc_type='natural')
+    spectrum_shifted = np.zeros((len(rv), len(wavelength)))
+    
+    ## RV should be in km/s
+    for irv, rv in enumerate(rv_array):
+        wavelength_shifted = doppler_shift_wavsoln(wavsoln=wavelength, 
+                                                         velocity=rv)
+        
+        spectrum_shifted[irv, :] = model_spl(wavelength_shifted)
+    return spectrum_shifted

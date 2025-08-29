@@ -7,7 +7,8 @@ license = "MIT"
 readme = "readme.md"
 requires-python = ">=3.10"
 dependencies = ['numpy', 'astropy', 'scipy', 'matplotlib', 'tqdm', 'pyyaml', 'healpy', 'spotter', 
-'expecto', "splinex@git+https://github.com/cornelius-braun/splinex", 'exojax', 'skycalc_ipy', 'pyfastchem' ]
+'expecto', "splinex@git+https://github.com/cornelius-braun/splinex", 
+'exojax', 'skycalc_ipy', 'pyfastchem']
 
 [build-system]
 requires = ["hatchling", "hatch-vcs"]

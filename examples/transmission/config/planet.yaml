@@ -20,26 +20,30 @@ P_ref: 0.0 # in log(bar)
 P_min: 1.0e-6 # in bars, 1 bar is 1e5 Pa,  so in Pa this is 1.0e-1
 P_max: 1.0e+2 # in bars, so in Pa this is 1.0e7
 N_layers: 50
-# lam_min: 1.3 # in microns  
-# lam_max: 2.5 # in microns 
-spacing: null # R # How do you want the wavelength points to be spaced? Use R for computing models at constant resolving power, and null if you have an wavelength grid to be specified.
+lam_min: 1.3 # in microns  
+lam_max: 2.5 # in microns 
+spacing: R # How do you want the wavelength points to be spaced? Use R for computing models at constant resolving power. 
 log_fs: 0.0
 phase_offset: 0.
 Kp: 188.055 ## Calculate this for HD189
 
-TP_type: Linear # In future allow for custom, Guillot, or other prescriptions.
-# # Order is (P1,T1),(P2,T2),[P0=,T0=], i.e. down to top. P1 must be greater than P2! and in log P(Pa)
-P1: 4.
-T1: 3000.
-P2: 2.
-T2: 2000.
+## TP profile parameters
+TP_type: Madhusudhan_Seager # In future allow for custom, Guillot, or other prescriptions.
+# ###### Initial params here set from a fit of the TP to Mike's RCTE cold trap TP 
+# ### Make sure that P1 < P3
+T_set: 2250.
+alpha1: 0.9 
+alpha2: 0.098 
+log_P1: -4.2
+log_P2: -2.7 # Setting this to one let's it be folded into T_eq
+log_P3: -1.84
 
 ## Chemistry
 fast_chem_inputs: '/home/astro/phsprd/code/crocodel/fastchem_inputs/'
 chemistry: 'eq_chem' # 'eq_chem' ## Can be 'eq_chem' or 'free_chem' ; if set to 'eq_chem', then make sure that the free params have 'c_to_o' and/or 'o_to_h' as the free parameters.  
 logZ_planet: 0.0
 C_to_O: 0.5
-use_C_to_O: False
+use_C_to_O: True
 include_condensation: False
 include_cia: True
 

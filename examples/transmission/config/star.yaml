@@ -1,0 +1,51 @@
+star:
+  teff: 5300
+  log_g: 4.5
+  met: 0.0
+  model_type: 'phoenix'
+  Rs: 0.76 ## In solar radius 
+  nside: 100
+  inc: 90.
+  v_eq: 3.5
+  alpha: 0.
+  u1: 0.5507
+  u2: 0.1361
+  LD: 'quadratic_phoenix' ## this will override u1 and u2 values. Set to quadratic_self if you want to use self defined LD coefficients.
+  Vsys: -2.204 ## in km/s
+  
+spots_and_faculae:
+  parametrization: 'explicit'
+  delta_teff: [-1100.]
+  lat: [0.] ## In degrees.
+  lon: [45.] ## In degrees.
+  rad: [0.1] ## Radius of the spot, in degrees or stellar radius.
+  radunit: 'stellar_radius' ##
+  sharpness: [1000]
+  log_g: [4.5]
+  met: [0.0]
+  model_type: 'phoenix'
+  cb_sup: [300.] # in m/s
+  u1: [0.5507, 0.5507]
+  u2: [0.1361, 0.1361]
+  LD: 'quadratic_phoenix' ## this will override u1 and u2 values. Set to quadratic_self if you want to use self defined LD coefficients.
+
+  # parametrization: 'distribution_only_spots'
+  # delta_teff_spots: [-1100., 300.] ## Mean and standard deviation of Gaussian distribution, in Kelvin.
+  # lat: ['gauss', 16., 1.] ## Mean and standard deviation of Gaussian distribution, in degrees.
+  # lon: ['uniform', -90., 90.] ## Uniformly sampled between -90 to 90 degrees.
+  # f_spot: 0.4 ## Fractional spot coverage fraction, fixed for now. 
+  # rad: 0.1 ## Radius of the spots, in degrees or stellar radius.
+  # radunit: 'stellar_radius' ##
+  # sharpness: 1000
+  # log_g: 4.5
+  # met: 0.0
+  # model_type: 'phoenix'
+  # cb_sup: 300. # in m/s
+  # u1: [0.5507, 0.5507]
+  # u2: [0.1361, 0.1361]
+  # LD: 'quadratic_phoenix' ## this will override u1 and u2 values. Set to quadratic_self if you want to use self defined LD coefficients.
+
+
+
+
+

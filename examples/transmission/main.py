@@ -7,7 +7,6 @@ import yaml
 import jax.numpy as jnp
 from plastar import grid
 from plastar import utils
-from plastar import planet
 from astropy.io import fits
 from spotter import show, viz
 from tqdm import tqdm
@@ -60,7 +59,6 @@ savedir = config_dd_simulation['simulations_savedir'] + infostring + '/'
 star_dict = config_dd_star['star']
 spots_and_faculae_dict = config_dd_star['spots_and_faculae']
 planet_dict = config_dd_planet
-simulation_dict = config_dd_simulation
 
 """Create the directory to save results."""
 try:
@@ -102,30 +100,12 @@ star, flux, wavsoln = star_grid.get_spectral_time_series(time=time_stamps,
                                                         wavelength_chunk_length = config_dd_simulation['wavelength_chunk_length'], 
                                                         wavelength_overlap_length = config_dd_simulation['wavelength_overlap_length']
                                                         )
-
-planet_atmosphere = planet.PlanetAtmosphere(planet_dict = planet_dict,
-                                            simulation_dict = simulation_dict,
-                                            star_dict = star_dict,
-                                            wavelength_solution = wavsoln)
-_, Fp = planet_atmosphere.get_Fp_or_Rp()
+xp, yp, zp = star_grid.planet_coords(time_stamps)
 
 plt.figure()
-plt.plot(wavsoln, Fp/flux[0], label = 'Fp/Fs')
-plt.savefig(savedir + 'Fp_by_Fs.png', format = 'png', dpi = 300)
-
-plt.figure()
-plt.plot(wavsoln, Fp/np.max(Fp), label = 'Fp norm')
-plt.plot(wavsoln, flux[0]/np.max(flux[0]), label = 'Fs norm')
-plt.legend()
-plt.savefig(savedir + 'Fp_and_Fs.png', format = 'png', dpi = 300)
-
-import pdb
-pdb.set_trace()
-
-################################################################
-"""Get the planetary spectrum Fp using genesis"""
-################################################################
-
+plt.plot(phases_planet, np.sum(flux, axis = 1)/np.max(np.sum(flux, axis = 1)) )
+# plt.plot(phases_planet, np.sum(flux, axis = 1) )
+plt.savefig(savedir + 'output_light_curve.png', dpi = 300, format = 'png')
 
 
 """Make the video"""
