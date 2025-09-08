@@ -63,8 +63,9 @@ class StellarGrid:
             self.cq_star,self.eq_star = ps.coeffs_qd(do_mc=False)         # Estimate quadratic law coefficients
             self.LD_coeffs_star = np.array( [self.cq_star[0][0], self.cq_star[0][1]] )
         
-        self.star_period = ( (2 * np.pi * self.rstar * un.Rsun) / (self.v_eq * un.km / un.s) ).to(un.day)
-        
+        # self.star_period = ( (2 * np.pi * self.rstar * un.Rsun) / (self.v_eq * un.km / un.s) ).to(un.day)
+        self.star_period = ( (2 * np.pi * self.rstar * 6.957e+8) / (self.v_eq * 1000.) ) / (24.*3600.)
+        print(self.star_period)
         if include_spots_and_faculae:
             self.spots_and_faculae_dict = kwargs.pop('spots_and_faculae_dict')
             
@@ -107,13 +108,14 @@ class StellarGrid:
             self.planet_impact_param = self.planet_dict['impact_param']
             self.planet_radius = self.planet_dict['Rp_by_Rs'] * self.star_dict['Rs'] ## convert the planet Radius in terms of solar radius.
             
-            self.body = Body(time_transit=0.0, period=1.0, radius=self.planet_radius,
+            self.body = Body(time_transit=0.0, period=self.planet_orb_per, radius=self.planet_radius,
                         impact_param=self.planet_impact_param)
             self.system = System().add_body(self.body)
             
         self.star = Star.from_sides(self.nside, 
+                                radius = self.rstar,
                                inc = self.star_inc,
-                               period = self.star_period.value,
+                               period = self.star_period,
                                u=(self.LD_coeffs_star[0], self.LD_coeffs_star[1]) )
         
             

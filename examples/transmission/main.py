@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 import datetime
 import os
 import argparse
@@ -100,13 +101,46 @@ star, flux, wavsoln = star_grid.get_spectral_time_series(time=time_stamps,
                                                         wavelength_chunk_length = config_dd_simulation['wavelength_chunk_length'], 
                                                         wavelength_overlap_length = config_dd_simulation['wavelength_overlap_length']
                                                         )
-xp, yp, zp = star_grid.planet_coords(time_stamps)
+print(wavsoln)
+## Confirm this is within +-v sini ; Try converting wavsoln to RV
+c_ms = 299792458.
+rv_soln = ((wavsoln - 2460.8)/2468.8)*c_ms
 
+xp, yp, zp = star_grid.planet_coords(time_stamps)
+light_curve = np.sum(flux, axis = 1)/np.max(np.sum(flux, axis = 1))
 plt.figure()
-plt.plot(phases_planet, np.sum(flux, axis = 1)/np.max(np.sum(flux, axis = 1)) )
-# plt.plot(phases_planet, np.sum(flux, axis = 1) )
+# plt.plot(phases_planet, np.sum(flux, axis = 1)/np.max(np.sum(flux, axis = 1)) )
+plt.plot(phases_planet, light_curve )
 plt.savefig(savedir + 'output_light_curve.png', dpi = 300, format = 'png')
 
+"""Make a 2D plot of the out - in flux """
+# in_minus_out = (flux[:,:]-flux[0,:])/flux[0,:]
+in_minus_out = (flux[:,:]-flux[0,:])
+in_div_out = (flux[:,:]/flux[0,:])/light_curve[:,None]
+# for iw in range(in_div_out.shape[1]):
+#     in_div_out[:,iw] = in_div_out[:,iw]/light_curve
+
+
+# in_minus_out = (flux[:,:]-flux[0,:])/light_curve[:,None]
+plt.figure(figsize = (18,10))
+# plt.pcolormesh(wavsoln, phases_planet, in_minus_out,
+#                norm = mpl.colors.Normalize(vmin=np.min(in_minus_out), vmax=np.max(in_minus_out)))
+            #    norm = mpl.colors.Normalize(vmin=0.01, vmax=np.max(out_minus_in)))
+# plt.pcolormesh(wavsoln, phases_planet, in_div_out)
+plt.pcolormesh(rv_soln/1000, phases_planet, in_div_out)
+plt.axvline(x = -star_dict['v_eq'], color = 'w', linestyle = 'dashed' )
+plt.axvline(x = star_dict['v_eq'], color = 'w', linestyle = 'dashed' )
+
+plt.colorbar()
+# plt.title('(flux[:,:]-flux[0,:])/flux[0,:]')
+plt.title('(flux[:,:]-flux[0,:])')
+# plt.title('(flux[:,:]-flux[0,:])/light_curve')
+plt.xlabel('Wavelength [nm]')
+plt.ylabel('Phases')
+# plt.savefig(savedir + 'doppler_in_minus_out.png', dpi = 300, format = 'png')
+plt.savefig(savedir + 'doppler_in_div_out_lc_norm.png', dpi = 300, format = 'png')
+
+exit()
 
 """Make the video"""
 output_video_path = savedir + 'output_spectrum.mp4'
@@ -132,7 +166,7 @@ for ip, phase_star in enumerate(phases_star):
     ax=ax,
     radius=star.radius,
     period=star.period,
-    rv=False)
+    rv=True)
     
     # viz.show(star.y, u=star.u[0])
     circle = plt.Circle((xp[ip], yp[ip]), star_grid.planet_radius, color="0.1", zorder=10)
@@ -141,17 +175,21 @@ for ip, phase_star in enumerate(phases_star):
     ax = axes[1]
     
     ### Plot the spotty and non-spotty spectrum 
-    # ax.plot(wavsoln_model_star, spotty_spectrum[ip,:], c="k", lw=1, label="spotted")
-    # ax.plot(wavsoln_model_star, nonspotted_spectrum, "-", c="r", lw=1, label="non-spotted")
     print( np.mean(flux[0,:]), np.mean(flux[ip,:]) )
-    # ax.plot(wavsoln_model_star, flux[ip,:]-flux[0,:], 
-    #         c="k", lw=1, label='Flux')
-    ax.plot(wavsoln, flux[ip,:], 
-        c="k", lw=1, label='Flux')
+    print( flux[ip,:] - flux[0,:] )
+    ax.plot(wavsoln, flux[ip,:]-flux[0,:], 
+        c="k", lw=1, label='flux[ip,:] - flux[0,:]')
+    # ax.plot(wavsoln, flux[0,:], c="k", lw=1, label='F(t=0)')
+    # ax.plot(wavsoln, (flux[ip,:]/light_curve[ip]) - flux[0,:], c="r", lw=1, label='F(t)')
+    # import pdb; pdb.set_trace()
+    # ax.plot(wavsoln, flux[ip,:]/light_curve[ip], c="r", lw=1, label='F(t)/light_curve')
     
+    ax.legend()
     # ax.axis("off")
     ax.set_xlabel('Wavelength [nm]')
-    ax.set_ylabel(' F(t=0) - F(t)')
+    # ax.set_ylabel(' F(t) - F(t=0)')
+    # ax.set_ylabel('(flux[ip,:]/light_curve[ip]) - flux[0,:]')
+    ax.set_ylabel('flux[ip,:] - flux[0,:]')
     # ax.set_ylim(0.95, 0.99)
     # plt.savefig(savedir + 'output_spectrum_phase_'+str(ip)+'.png', dpi = 300, format = 'png')
     
