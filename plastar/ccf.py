@@ -68,7 +68,7 @@ def doppler_shift_modelcube(modelcube: ArrayLike, RV: ArrayLike, model_wavsoln: 
 def logL_per_KpVsys(Kp, Vsys, datacube, modelcube, model_wavsoln, data_wavsoln, phases, berv):
     RV = compute_RV(Kp, Vsys, phases, berv)
     modelcube_shifted = doppler_shift_modelcube(modelcube, RV, model_wavsoln, data_wavsoln)
-    return jnp.sum(jax.vmap(get_R, in_axes=(0, 0))(datacube, modelcube_shifted))
+    return jnp.sum(jax.vmap(get_logL, in_axes=(0, 0))(datacube, modelcube_shifted))
 
 @jit
 def compute_logL_map_per_order(datacube: ArrayLike, modelcube: ArrayLike, Kp_range: ArrayLike, 

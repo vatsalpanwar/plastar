@@ -8,8 +8,10 @@ import jax.numpy as jnp
 from plastar import grid
 from plastar import utils
 from plastar import planet
+from plastar import ccf
 from astropy.io import fits
 from spotter import show, viz
+from jax.numpy import interp
 from tqdm import tqdm
 import imageio.v2 as imageio # Use imageio.v2 for the current API
 from shutil import copyfile
@@ -95,7 +97,15 @@ star_grid = grid.StellarGrid(star_dict = star_dict, spots_and_faculae_dict = spo
                         wavsoln = wavsoln_model_star,
                         include_spots_and_faculae = True, include_planet = True)
 
-star, flux, wavsoln = star_grid.get_spectral_time_series(time=time_stamps, 
+star, F_star_quiet, wavsoln = star_grid.get_spectral_time_series(time=time_stamps, 
+                                                            stellar_spectrum = flux_model_star, 
+                                                        spot_spectra = flux_model_spot, 
+                                                        include_spots_and_faculae = False,
+                                                        wavelength_chunk_length = config_dd_simulation['wavelength_chunk_length'], 
+                                                        wavelength_overlap_length = config_dd_simulation['wavelength_overlap_length']
+                                                        )
+
+star, F_star, wavsoln = star_grid.get_spectral_time_series(time=time_stamps, 
                                                             stellar_spectrum = flux_model_star, 
                                                         spot_spectra = flux_model_spot, 
                                                         include_spots_and_faculae = True,
@@ -107,20 +117,106 @@ planet_atmosphere = planet.PlanetAtmosphere(planet_dict = planet_dict,
                                             simulation_dict = simulation_dict,
                                             star_dict = star_dict,
                                             wavelength_solution = wavsoln)
-_, Fp = planet_atmosphere.get_Fp_or_Rp()
 
-plt.figure()
-plt.plot(wavsoln, Fp/flux[0], label = 'Fp/Fs')
-plt.savefig(savedir + 'Fp_by_Fs.png', format = 'png', dpi = 300)
+_, F_planet = planet_atmosphere.get_Fp_or_Rp()
 
-plt.figure()
-plt.plot(wavsoln, Fp/np.max(Fp), label = 'Fp norm')
-plt.plot(wavsoln, flux[0]/np.max(flux[0]), label = 'Fs norm')
-plt.legend()
-plt.savefig(savedir + 'Fp_and_Fs.png', format = 'png', dpi = 300)
+################################################################
+################################################################
+"""Create the observing sequence."""
+################################################################
+################################################################
+## Compute the planet RV for each phase and Doppler shift and stack F_planet
+berv = np.zeros((len(phases_planet),))
+RV_array = ccf.compute_RV(Kp = planet_dict['Kp'], 
+                          Vsys = star_dict['Vsys'], 
+                          phases = phases_planet,
+                          berv = berv)
+## Doppler shift and stack F_planet 
+F_planet_shifted = np.ones( (len(phases_planet), F_planet.shape[0]) )
+for ip in range(len(phases_planet)):
+    wavsoln_shifted = ccf.doppler_shift_wavsoln(RV_array[ip], wavsoln)
+    F_planet_shifted[ip,:] = interp(wavsoln_shifted, wavsoln, F_planet)
 
-import pdb
-pdb.set_trace()
+## Doppler shift F_star by Vsys and berv 
+F_star_shifted = np.ones(F_star.shape)
+for ip in range(len(phases_star)):
+    RV_star = star_dict['Vsys'] + berv[ip]
+    wavsoln_shifted = ccf.doppler_shift_wavsoln(RV_star, wavsoln)
+    F_star_shifted[ip,:] = interp(wavsoln_shifted, wavsoln, F_star[ip,:])
+    
+F_star_quiet_shifted = np.ones(F_star.shape)
+for ip in range(len(phases_star)):
+    RV_star = star_dict['Vsys'] + berv[ip]
+    wavsoln_shifted = ccf.doppler_shift_wavsoln(RV_star, wavsoln)
+    F_star_quiet_shifted[ip,:] = interp(wavsoln_shifted, wavsoln, F_star_quiet[ip,:])
+    
+### Plot and check 
+plt.figure(figsize = (18,10))
+plt.pcolormesh(wavsoln, phases_planet, F_planet_shifted)
+plt.colorbar()
+plt.xlabel('Wavelength [nm]')
+plt.ylabel('Phases')
+plt.title('Fp')
+plt.savefig(savedir + 'Fp_doppler_shifted.png', format = 'png', dpi = 300)
+
+plt.figure(figsize = (18,10))
+plt.pcolormesh(wavsoln, phases_planet, F_star_shifted)
+plt.colorbar()
+plt.xlabel('Wavelength [nm]')
+plt.ylabel('Phases')
+plt.title('Fs')
+plt.savefig(savedir + 'Fs_doppler_shifted.png', format = 'png', dpi = 300)
+
+plt.figure(figsize = (18,10))
+Fp_by_Fs = F_planet_shifted/F_star_shifted
+plt.pcolormesh(wavsoln, phases_planet, Fp_by_Fs)
+plt.colorbar()
+plt.xlabel('Wavelength [nm]')
+plt.ylabel('Phases')
+plt.title('Fp/Fs')
+plt.savefig(savedir + 'Fp_by_Fs_doppler_shifted.png', format = 'png', dpi = 300)
+
+plt.figure(figsize = (18,10))
+Fp_by_Fs_quiet = F_planet_shifted/F_star_quiet_shifted
+plt.pcolormesh(wavsoln, phases_planet, Fp_by_Fs_quiet )
+plt.colorbar()
+plt.xlabel('Wavelength [nm]')
+plt.ylabel('Phases')
+plt.title('Fp/Fs quiet')
+plt.savefig(savedir + 'Fp_by_Fs_quiet_doppler_shifted.png', format = 'png', dpi = 300)
+
+plt.figure(figsize = (18,10))
+plt.pcolormesh(wavsoln, phases_planet, Fp_by_Fs - Fp_by_Fs_quiet)
+plt.colorbar()
+plt.xlabel('Wavelength [nm]')
+plt.ylabel('Phases')
+plt.title('Fp/Fs - Fp/Fs (quiet)')
+plt.savefig(savedir + 'Fp_by_Fs_minus_Fp_by_Fs_quiet_doppler_shifted.png', format = 'png', dpi = 300)
+
+##### Save the outputs
+spdd = {}
+spdd['datacube'] = F_star*(1. + Fp_by_Fs)
+spdd['datacube_quiet'] = F_star_quiet*(1. + Fp_by_Fs_quiet)
+spdd['berv'] = berv
+spdd['phases'] = phases_planet
+spdd['wavsoln'] = wavsoln
+spdd['Fp_by_Fs'] = Fp_by_Fs
+spdd['Fp_by_Fs_quiet'] = Fp_by_Fs
+np.save(savedir + 'spdd.npy', spdd)
+
+exit()
+# plt.figure()
+# plt.plot(wavsoln, Fp/flux[0], label = 'Fp/Fs')
+# plt.savefig(savedir + 'Fp_by_Fs.png', format = 'png', dpi = 300)
+
+# plt.figure()
+# plt.plot(wavsoln, Fp/np.max(Fp), label = 'Fp norm')
+# plt.plot(wavsoln, flux[0]/np.max(flux[0]), label = 'Fs norm')
+# plt.legend()
+# plt.savefig(savedir + 'Fp_and_Fs.png', format = 'png', dpi = 300)
+
+# import pdb
+# pdb.set_trace()
 
 ################################################################
 """Get the planetary spectrum Fp using genesis"""
