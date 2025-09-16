@@ -104,10 +104,14 @@ star, flux, wavsoln = star_grid.get_spectral_time_series(time=time_stamps,
 print(wavsoln)
 ## Confirm this is within +-v sini ; Try converting wavsoln to RV
 c_ms = 299792458.
-rv_soln = ((wavsoln - 2460.8)/2468.8)*c_ms
+rv_soln = ((wavsoln - 2460.7)/2468.7)*c_ms
+# rv_width = 3.5 * 1e3
+# wv_width = (rv_width/c_ms)
 
 xp, yp, zp = star_grid.planet_coords(time_stamps)
 light_curve = np.sum(flux, axis = 1)/np.max(np.sum(flux, axis = 1))
+light_curve_unnorm = np.sum(flux, axis = 1)
+
 plt.figure()
 # plt.plot(phases_planet, np.sum(flux, axis = 1)/np.max(np.sum(flux, axis = 1)) )
 plt.plot(phases_planet, light_curve )
@@ -116,7 +120,8 @@ plt.savefig(savedir + 'output_light_curve.png', dpi = 300, format = 'png')
 """Make a 2D plot of the out - in flux """
 # in_minus_out = (flux[:,:]-flux[0,:])/flux[0,:]
 in_minus_out = (flux[:,:]-flux[0,:])
-in_div_out = (flux[:,:]/flux[0,:])/light_curve[:,None]
+# in_div_out = (flux[:,:]/flux[0,:])/light_curve[:,None]
+in_div_out = (flux[:,:]/flux[0,:])
 # for iw in range(in_div_out.shape[1]):
 #     in_div_out[:,iw] = in_div_out[:,iw]/light_curve
 
@@ -127,6 +132,7 @@ plt.figure(figsize = (18,10))
 #                norm = mpl.colors.Normalize(vmin=np.min(in_minus_out), vmax=np.max(in_minus_out)))
             #    norm = mpl.colors.Normalize(vmin=0.01, vmax=np.max(out_minus_in)))
 # plt.pcolormesh(wavsoln, phases_planet, in_div_out)
+# plt.pcolormesh(rv_soln/1000, phases_planet[10:-10], in_minus_out[10:-10, :])
 plt.pcolormesh(rv_soln/1000, phases_planet, in_div_out)
 plt.axvline(x = -star_dict['v_eq'], color = 'w', linestyle = 'dashed' )
 plt.axvline(x = star_dict['v_eq'], color = 'w', linestyle = 'dashed' )
@@ -137,8 +143,8 @@ plt.title('(flux[:,:]-flux[0,:])')
 # plt.title('(flux[:,:]-flux[0,:])/light_curve')
 plt.xlabel('Wavelength [nm]')
 plt.ylabel('Phases')
-# plt.savefig(savedir + 'doppler_in_minus_out.png', dpi = 300, format = 'png')
-plt.savefig(savedir + 'doppler_in_div_out_lc_norm.png', dpi = 300, format = 'png')
+plt.savefig(savedir + 'doppler_in_minus_out.png', dpi = 300, format = 'png')
+# plt.savefig(savedir + 'doppler_in_div_out_lc_norm.png', dpi = 300, format = 'png')
 
 exit()
 

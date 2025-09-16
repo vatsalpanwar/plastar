@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 results_path = '/home/astro/phsprd/code/plastar/examples/emission/results/TEST_emission_dTspot--1100_spot_size-0.2_long-0_09-09-2025T16-58-54/'
 spdd = np.load(results_path + 'spdd.npy', allow_pickle = True).item()
 
-Vsys_range = jnp.linspace(-50, 50, 100)
+Vsys_range = jnp.linspace(-25, 25, 100)
 Kp_range = jnp.linspace(150, 250, 100)
 modelcube = jnp.array(spdd['Fp_by_Fs'])
 model_wavsoln = jnp.array(spdd['wavsoln'])
@@ -27,7 +27,11 @@ berv = jnp.array(spdd['berv'])
 datacube = spdd['datacube']
 
 ## Mean subtract each row of datacube 
-
+for ip in range(datacube.shape[0]):
+    datacube[ip,:] = datacube[ip,:] / np.median(datacube[ip,:])
+for ip in range(datacube.shape[0]):
+    datacube[ip,:] = datacube[ip,:] - np.median(datacube[ip,:])
+datacube = jnp.array(datacube)
 
 import time
 
@@ -38,11 +42,13 @@ out_jax = ccf.compute_logL_map_per_order(datacube, modelcube, Kp_range,
 print(out_jax.shape)
 end = time.time()
 print("Time taken for jax:",(end-start), "seconds")
-
 import pdb; pdb.set_trace()
+
 
 plt.figure(figsize = (15,15))
 plt.pcolormesh(Vsys_range, Kp_range, out_jax)
+plt.axhline(y = 188)
+plt.axvline(x=-2.2)
 plt.colorbar()
 plt.xlabel('Vsys')
 plt.ylabel('Kp')
