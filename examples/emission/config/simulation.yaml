@@ -1,4 +1,4 @@
-infostring: 'TEST_emission_dTspot--1100_spot_size-0.1_long-45_'
+infostring: 'TEST_emission_dTspot--1100_spot_size-0.2_long-0_'
 method: 'emission'
 simulations_savedir: '/home/astro/phsprd/code/plastar/examples/emission/results/'
 

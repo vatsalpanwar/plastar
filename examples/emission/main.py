@@ -201,7 +201,7 @@ spdd['berv'] = berv
 spdd['phases'] = phases_planet
 spdd['wavsoln'] = wavsoln
 spdd['Fp_by_Fs'] = Fp_by_Fs
-spdd['Fp_by_Fs_quiet'] = Fp_by_Fs
+spdd['Fp_by_Fs_quiet'] = Fp_by_Fs_quiet
 np.save(savedir + 'spdd.npy', spdd)
 
 exit()

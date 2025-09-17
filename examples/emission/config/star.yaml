@@ -17,8 +17,8 @@ spots_and_faculae:
   parametrization: 'explicit'
   delta_teff: [-1100.]
   lat: [0.] ## In degrees.
-  lon: [45.] ## In degrees.
-  rad: [0.1] ## Radius of the spot, in degrees or stellar radius.
+  lon: [0.] ## In degrees.
+  rad: [0.2] ## Radius of the spot, in degrees or stellar radius.
   radunit: 'stellar_radius' ##
   sharpness: [1000]
   log_g: [4.5]
