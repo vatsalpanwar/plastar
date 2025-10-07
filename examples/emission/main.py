@@ -112,7 +112,7 @@ star, F_star, wavsoln = star_grid.get_spectral_time_series(time=time_stamps,
                                                         wavelength_chunk_length = config_dd_simulation['wavelength_chunk_length'], 
                                                         wavelength_overlap_length = config_dd_simulation['wavelength_overlap_length']
                                                         )
-
+import pdb; pdb.set_trace()
 planet_atmosphere = planet.PlanetAtmosphere(planet_dict = planet_dict,
                                             simulation_dict = simulation_dict,
                                             star_dict = star_dict,
@@ -197,12 +197,41 @@ plt.savefig(savedir + 'Fp_by_Fs_minus_Fp_by_Fs_quiet_doppler_shifted.png', forma
 spdd = {}
 spdd['datacube'] = F_star*(1. + Fp_by_Fs)
 spdd['datacube_quiet'] = F_star_quiet*(1. + Fp_by_Fs_quiet)
+spdd['F_star'] = F_star_shifted
+spdd['F_star_quiet'] = F_star_quiet_shifted
+spdd['F_planet_quiet'] = F_star_quiet_shifted
 spdd['berv'] = berv
 spdd['phases'] = phases_planet
 spdd['wavsoln'] = wavsoln
 spdd['Fp_by_Fs'] = Fp_by_Fs
 spdd['Fp_by_Fs_quiet'] = Fp_by_Fs_quiet
 np.save(savedir + 'spdd.npy', spdd)
+
+##### Plot the datacubes as well
+plt.figure(figsize = (18,10))
+plt.pcolormesh(wavsoln, phases_planet, spdd['datacube'])
+plt.colorbar()
+plt.xlabel('Wavelength [nm]')
+plt.ylabel('Phases')
+plt.title('datacube')
+plt.savefig(savedir + 'datacube.png', format = 'png', dpi = 300)
+
+plt.figure(figsize = (18,10))
+plt.pcolormesh(wavsoln, phases_planet, spdd['datacube_quiet'])
+plt.colorbar()
+plt.xlabel('Wavelength [nm]')
+plt.ylabel('Phases')
+plt.title('datacube (quiet)')
+plt.savefig(savedir + 'datacube_quiet.png', format = 'png', dpi = 300)
+
+plt.figure(figsize = (18,10))
+plt.pcolormesh(wavsoln, phases_planet, spdd['datacube'] - spdd['datacube_quiet'])
+plt.colorbar()
+plt.xlabel('Wavelength [nm]')
+plt.ylabel('Phases')
+plt.title('datacube - datacube (quiet)')
+plt.savefig(savedir + 'datacube_minus_datacube_quiet.png', format = 'png', dpi = 300)
+
 
 exit()
 # plt.figure()

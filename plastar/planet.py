@@ -44,13 +44,14 @@ class PlanetAtmosphere():
         self.N_layers = self.planet_dict['N_layers'] # Number of pressure layers in the atmosphere 
         self.spacing = self.planet_dict['spacing'] # Wavelength grid spacing, use 'R' for constant resolving power
 
-        if self.wavelength_solution is None and self.spacing !=None:
-            self.lam_min = self.simulation_dict['wavelength_min'] * 1e-3 # Minimum wavelength for model calculation, in microns
-            self.lam_max = self.simulation_dict['wavelength_max'] * 1e-3 # Maximum wavelength for model calculation, in microns
-        elif self.wavelength_solution is not None and self.spacing == None:
-            self.lam_min, self.lam_max = None, None
-            
-        self.resolving_power = self.planet_dict['model_resolution_working'] # Resolving power for the model calculation (use 250000 which will later be convolved down)
+        # if self.wavelength_solution is None and self.spacing !=None:
+        #     self.lam_min = self.simulation_dict['wavelength_min'] * 1e-3 # Minimum wavelength for model calculation, in microns
+        #     self.lam_max = self.simulation_dict['wavelength_max'] * 1e-3 # Maximum wavelength for model calculation, in microns
+        # elif self.wavelength_solution is not None and self.spacing == None:
+        #     self.lam_min, self.lam_max = None, None
+        
+        self.lam_min, self.lam_max = None, None 
+        self.resolving_power = self.simulation_dict['model_resolution_working'] # Resolving power for the model calculation (use 250000 which will later be convolved down)
         
         self.fix_MMW = self.planet_dict['fix_MMW']
         self.MMW_value = self.planet_dict['MMW_value']

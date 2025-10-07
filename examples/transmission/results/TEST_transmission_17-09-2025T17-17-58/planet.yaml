@@ -1,6 +1,6 @@
 ## Planet orbit parameters
 orbper: 2.218577
-impact_param: 0.656
+impact_param: 0.6
 transit_duration: 1.84 ## in hours
 inc: 85.690
 omega: 0.
@@ -12,10 +12,10 @@ a: 8.73 ## in units of Rstar
 
 ## Planet atmosphere parameters
 modeling_method: 'genesis'
-# model_resolution_working: null # 200000
+model_resolution_working: 200000
 vsini_planet: 4.54 ## In km/s
-R_planet: 1.119 # In Jupiter radius
-log_g: 3.34
+R_planet: 1.52 # In Jupiter radius
+log_g: 3.107
 P_ref: 0.0 # in log(bar)
 P_min: 1.0e-6 # in bars, 1 bar is 1e5 Pa,  so in Pa this is 1.0e-1
 P_max: 1.0e+2 # in bars, so in Pa this is 1.0e7
@@ -25,14 +25,14 @@ N_layers: 50
 spacing: null # R # How do you want the wavelength points to be spaced? Use R for computing models at constant resolving power, and null if you have an wavelength grid to be specified.
 log_fs: 0.0
 phase_offset: 0.
-Kp: 154. ## Calculate this for HD189
+Kp: 188.055 ## Calculate this for HD189
 
 TP_type: Linear # In future allow for custom, Guillot, or other prescriptions.
 # # Order is (P1,T1),(P2,T2),[P0=,T0=], i.e. down to top. P1 must be greater than P2! and in log P(Pa)
 P1: 4.
-T1: 1800.
+T1: 3000.
 P2: 2.
-T2: 1200.
+T2: 2000.
 
 ## Chemistry
 fast_chem_inputs: '/home/astro/phsprd/code/crocodel/fastchem_inputs/'
@@ -51,8 +51,8 @@ MMW_value: 2.35
 abundances:
   co: -4.5
   h2o: -4.5
-  # oh: -4.5  
-  # h_minus: -6.
+  oh: -4.5  
+  h_minus: -6.
   he: -0.77
 
 species_name_fastchem:

@@ -35,7 +35,7 @@ def get_stellar_spectral_models_phoenix(config_file_path = None):
     star_dict = config_dd_star['star']
 
     # Get the working resolution of the model    
-    R = config_dd_planet['model_resolution_working']
+    R = config_dd_simulation['model_resolution_working']
     
     # Get the minimum and maximum wavelength range 
     lam_min, lam_max = config_dd_simulation['instrument']['wavelength_min'], config_dd_simulation['instrument']['wavelength_max']
@@ -92,7 +92,7 @@ def get_spot_spectral_models_phoenix(config_file_path = None):
     sp_fac_dict = config_dd_star['spots_and_faculae']
 
     # Get the working resolution of the model    
-    R = config_dd_planet['model_resolution_working']
+    R = config_dd_simulation['model_resolution_working']
     
     # Get the minimum and maximum wavelength range 
     lam_min, lam_max = config_dd_simulation['instrument']['wavelength_min'], config_dd_simulation['instrument']['wavelength_max']
