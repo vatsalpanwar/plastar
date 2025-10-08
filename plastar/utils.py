@@ -38,7 +38,7 @@ def get_stellar_spectral_models_phoenix(config_file_path = None):
     R = config_dd_simulation['model_resolution_working']
     
     # Get the minimum and maximum wavelength range 
-    lam_min, lam_max = config_dd_simulation['instrument']['wavelength_min'], config_dd_simulation['instrument']['wavelength_max']
+    lam_min, lam_max = config_dd_simulation['instrument']['wavelength_min_star'], config_dd_simulation['instrument']['wavelength_max_star']
     
     if config_dd_simulation['instrument']['wavelength_unit'] == 'Angstrom':
         lam_min, lam_max = lam_min*1.0e-10, lam_max*1.0e-10
@@ -95,7 +95,7 @@ def get_spot_spectral_models_phoenix(config_file_path = None):
     R = config_dd_simulation['model_resolution_working']
     
     # Get the minimum and maximum wavelength range 
-    lam_min, lam_max = config_dd_simulation['instrument']['wavelength_min'], config_dd_simulation['instrument']['wavelength_max']
+    lam_min, lam_max = config_dd_simulation['instrument']['wavelength_min_star'], config_dd_simulation['instrument']['wavelength_max_star']
     
     if config_dd_simulation['instrument']['wavelength_unit'] == 'Angstrom':
         lam_min, lam_max = lam_min*1.0e-10, lam_max*1.0e-10

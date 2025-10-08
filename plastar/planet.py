@@ -44,13 +44,16 @@ class PlanetAtmosphere():
         self.N_layers = self.planet_dict['N_layers'] # Number of pressure layers in the atmosphere 
         self.spacing = self.planet_dict['spacing'] # Wavelength grid spacing, use 'R' for constant resolving power
 
-        # if self.wavelength_solution is None and self.spacing !=None:
-        #     self.lam_min = self.simulation_dict['wavelength_min'] * 1e-3 # Minimum wavelength for model calculation, in microns
-        #     self.lam_max = self.simulation_dict['wavelength_max'] * 1e-3 # Maximum wavelength for model calculation, in microns
+        if self.wavelength_solution is None and self.spacing !=None:
+            self.lam_min = self.simulation_dict["instrument"]['wavelength_min'] * 1e-3 # Minimum wavelength for model calculation, in microns
+            self.lam_max = self.simulation_dict["instrument"]['wavelength_max'] * 1e-3 # Maximum wavelength for model calculation, in microns
+            lam = None # Will be calculated by Genesis for constant resolution 
+        elif self.wavelength_solution is not None:
+            lam = self.wavelength_solution*1e-9
         # elif self.wavelength_solution is not None and self.spacing == None:
         #     self.lam_min, self.lam_max = None, None
         
-        self.lam_min, self.lam_max = None, None 
+        # self.lam_min, self.lam_max = None, None 
         self.resolving_power = self.simulation_dict['model_resolution_working'] # Resolving power for the model calculation (use 250000 which will later be convolved down)
         
         self.fix_MMW = self.planet_dict['fix_MMW']
@@ -141,10 +144,11 @@ class PlanetAtmosphere():
             setattr(self, sp, 10.**self.planet_dict['abundances'][sp])
         
         # Instantiate GENESIS only once based on the given model properties
+        print(self.lam_min, self.lam_max)
         self.Genesis_instance = genesis.Genesis(self.P_min, self.P_max, 
                                                 self.N_layers, self.lam_min, 
                                                 self.lam_max, self.resolving_power, 
-                                                self.spacing, lam = self.wavelength_solution*1e-9, 
+                                                self.spacing, lam = lam, 
                                                 method = self.method)
 
 
