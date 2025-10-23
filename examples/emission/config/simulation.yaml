@@ -1,5 +1,5 @@
 # infostring: 'TEST_emission_dTspot--1100_spot_size-0.2_long-J_band_1120-1125-nm_'
-infostring: 'TEST_emission_dTspot--1100_spot_size-0.2_long-K_band_2440-2445-nm_'
+infostring: 'TEST_rev_emission_dTspot--1100_spot_size-0.2_long-K_band_2440-2445-nm_'
 method: 'emission'
 simulations_savedir: '/home/astro/phsprd/code/plastar/examples/emission/results/'
 
@@ -15,15 +15,23 @@ model_resolution_working: 200000
 instrument:
   name: igrins
   resolution: 45000
+  wavelength_min: 2435. # 2440. # 2450 # 1960.
+  wavelength_max: 2450. # 2445. # 2460. ##
+  wavelength_min_star: 2433. # 2440. # 2450 # 1960.
+  wavelength_max_star: 2452. # 2445. # 2460. ##
+
+  wavelength_common_min: 2440.
+  wavelength_common_max: 2445.
+
   # wavelength_min: 1120. # 2440. # 2450 # 1960.
   # wavelength_max: 1125. # 2445. # 2460. ##
   # wavelength_min_star: 1118. # 2440. # 2450 # 1960.
   # wavelength_max_star: 1128. # 2445. # 2460. ##
 
-  wavelength_min: 2440. # 2440. # 2450 # 1960.
-  wavelength_max: 2445. # 2445. # 2460. ##
-  wavelength_min_star: 2438. # 2440. # 2450 # 1960.
-  wavelength_max_star: 2447. # 2445. # 2460. ##
+  # wavelength_min: 2440. # 2440. # 2450 # 1960.
+  # wavelength_max: 2445. # 2445. # 2460. ##
+  # wavelength_min_star: 2438. # 2440. # 2450 # 1960.
+  # wavelength_max_star: 2447. # 2445. # 2460. ##
 
   # wavelength_min: 2440. # 2440. # 2450 # 1960.
   # wavelength_max: 2445. # 2445. # 2460. ##

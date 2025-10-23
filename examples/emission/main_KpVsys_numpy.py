@@ -1,6 +1,5 @@
 from plastar import ccf
 from plastar import ccf_numpy
-import jax.numpy as jnp
 import numpy as np
 import matplotlib.pyplot as plt
 SMALL_SIZE = 20
@@ -33,27 +32,33 @@ results_root = '/home/astro/phsprd/code/plastar/examples/emission/results/'
 # addinfo = 'noise_norm-by-median-Fstar'
 # addinfo = 'noiseless_norm-by-median-Fstar'
 #### K band 
-results_path = results_root + 'TEST_rev_emission_dTspot--1100_spot_size-0.2_long-K_band_2440-2445-nm_21-10-2025T12-09-10_copy/'
-addinfo = 'noise_norm-by-median-F_star'
+# results_path = results_root + 'TEST_rev_emission_dTspot--1100_spot_size-0.2_long-K_band_2440-2445-nm_21-10-2025T11-34-00/'
+
+results_path = results_root + 'TEST_rev_emission_dTspot--1100_spot_size-0.2_long-K_band_2440-2445-nm_21-10-2025T12-09-10/'
+addinfo = 'numpy'
 
 spdd = np.load(results_path + 'spdd.npy', allow_pickle = True).item()
-Vsys_range = jnp.linspace(-50, 50, 100)
-Kp_range = jnp.linspace(120, 180, 60)
+# Vsys_range = np.linspace(-50, 50, 100)
+# Kp_range = np.linspace(100., 200, 100)
+Vsys_range = np.linspace(-50, 50, 100)
+Kp_range = np.linspace(120., 180, 60)
 # modelcube_active = jnp.array(spdd['Fp_by_Fs'])
 # modelcube_quiet = jnp.array(spdd['Fp_by_Fs_quiet'])
 
-model_wavsoln = jnp.array(spdd['wavsoln_orig'])
-data_wavsoln = jnp.array(spdd['wavsoln'])
-phases = jnp.array(spdd['phases'])
-berv = jnp.array(spdd['berv'])
+model_wavsoln = np.array(spdd['wavsoln_orig'])
+data_wavsoln = np.array(spdd['wavsoln'])
+phases = np.array(spdd['phases'])
+berv = np.array(spdd['berv'])
 
-modelcube_Fp = jnp.array(spdd['F_planet_orig'][np.newaxis,:] * np.ones((len(phases), len(model_wavsoln) )) )
-modelcube_Fs = jnp.array(spdd['F_star_orig'])
-modelcube_Fs_quiet = jnp.array(spdd['F_star_quiet_orig'])
+modelcube_Fp = np.array(spdd['F_planet_orig'][np.newaxis,:] * np.ones((len(phases), len(model_wavsoln) )) )
+modelcube_Fs = np.array(spdd['F_star_orig'])
+modelcube_Fs_quiet = np.array(spdd['F_star_quiet_orig'])
 
 datacube_only_star_active = spdd['F_star']
 datacube_only_star_quiet = spdd['F_star_quiet']
-datacube = spdd['datacube'] + spdd['F_planet'] * 50
+
+# datacube = spdd['datacube']
+datacube = spdd['F_star'] + spdd['F_planet'] * 50.
 
 SNR = 100
 ### Add noise to the datacube 
@@ -73,33 +78,42 @@ plt.savefig(results_path + 'datacube_noisy.png', format = 'png', dpi = 300)
 
 ## Divide out the median of all exposures as a proxy for stellar correction 
 # norm_factor_active = np.median(spdd['F_star_quiet'], axis = 0)
-norm_factor_active = np.median(spdd['F_star'], axis = 0)
 # norm_factor_active = np.median(datacube[0,:])
 # norm_factor_active = spdd['F_star_quiet'][0,:]
 
+norm_factor_active = np.median(spdd['F_star'], axis = 0)
 datacube_active = datacube.copy()
 for ip in range(datacube.shape[0]):
     datacube_active[ip,:] = (datacube_active[ip,:] / norm_factor_active) - 1.
     # datacube_active[ip,:] = (datacube_active[ip,:] / np.median(datacube_active[ip,:])) - 1.
-datacube_active = jnp.array(datacube_active)
+datacube_active = np.array(datacube_active)
+
+
+# datacube_active = datacube.copy()
+# for ip in range(datacube.shape[0]):
+#     norm_factor_active = spdd['F_star'][ip,:]
+#     datacube_active[ip,:] = (datacube_active[ip,:] / norm_factor_active) - 1.
+#     # datacube_active[ip,:] = (datacube_active[ip,:] / np.median(datacube_active[ip,:])) - 1.
+# datacube_active = np.array(datacube_active)
+
 
 plt.figure(figsize = (18,10))
 plt.pcolormesh(data_wavsoln, phases, datacube_active)
 plt.colorbar()
 plt.xlabel('Wavelength [nm]')
 plt.ylabel('Phases')
-plt.title('datacube norm by median of first exp')
+# plt.title('datacube norm by median of first exp')
 plt.savefig(results_path + 'datacube_corrected.png', format = 'png', dpi = 300)
 
 
 import time
 start = time.time()
-ccf_active_data_active_model = ccf.compute_logL_map_per_order(datacube_active, modelcube_Fp, modelcube_Fs,
+ccf_active_data_active_model = ccf_numpy.compute_logL_map_per_order(datacube_active, modelcube_Fp, modelcube_Fs,
                                                               Kp_range, 
                            model_wavsoln, data_wavsoln,
                            Vsys_range, phases, berv)
 
-ccf_active_data_quiet_model = ccf.compute_logL_map_per_order(datacube_active, modelcube_Fp, modelcube_Fs_quiet,
+ccf_active_data_quiet_model = ccf_numpy.compute_logL_map_per_order(datacube_active, modelcube_Fp, modelcube_Fs_quiet,
                                                              Kp_range, 
                            model_wavsoln, data_wavsoln,
                            Vsys_range, phases, berv)

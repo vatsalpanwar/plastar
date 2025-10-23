@@ -15,7 +15,6 @@ from jax.numpy import interp
 from tqdm import tqdm
 import imageio.v2 as imageio # Use imageio.v2 for the current API
 from shutil import copyfile
-from scipy import interpolate
 
 SMALL_SIZE = 20
 MEDIUM_SIZE = 25
@@ -77,19 +76,6 @@ copyfile('./config/telluric.yaml', savedir + 'telluric.yaml')
 copyfile('./config/simulation.yaml', savedir + 'simulation.yaml')
 
 ################################################################
-"""Compute the planetary flux first."""
-################################################################
-# import pdb; pdb.set_trace()
-planet_atmosphere = planet.PlanetAtmosphere(planet_dict = planet_dict,
-                                            simulation_dict = simulation_dict,
-                                            star_dict = star_dict,
-                                            wavelength_solution = None)
-
-wavsoln, F_planet = planet_atmosphere.get_Fp_or_Rp()
-# import pdb; pdb.set_trace()
-################################################################
-
-################################################################
 """Read in the PHOENIX models for star and spots and splice and convolve to instrument resolution."""
 ################################################################
 wavsoln_model_star, flux_model_star = utils.get_stellar_spectral_models_phoenix(config_file_path = './config/')
@@ -111,7 +97,7 @@ star_grid = grid.StellarGrid(star_dict = star_dict, spots_and_faculae_dict = spo
                         wavsoln = wavsoln_model_star,
                         include_spots_and_faculae = True, include_planet = True)
 
-star, F_star_quiet_, wavsoln_star = star_grid.get_spectral_time_series(time=time_stamps, 
+star, F_star_quiet, wavsoln = star_grid.get_spectral_time_series(time=time_stamps, 
                                                             stellar_spectrum = flux_model_star, 
                                                         spot_spectra = flux_model_spot, 
                                                         include_spots_and_faculae = False,
@@ -119,27 +105,20 @@ star, F_star_quiet_, wavsoln_star = star_grid.get_spectral_time_series(time=time
                                                         wavelength_overlap_length = config_dd_simulation['wavelength_overlap_length']
                                                         )
 
-star, F_star_, wavsoln_star = star_grid.get_spectral_time_series(time=time_stamps, 
+star, F_star, wavsoln = star_grid.get_spectral_time_series(time=time_stamps, 
                                                             stellar_spectrum = flux_model_star, 
                                                         spot_spectra = flux_model_spot, 
                                                         include_spots_and_faculae = True,
                                                         wavelength_chunk_length = config_dd_simulation['wavelength_chunk_length'], 
                                                         wavelength_overlap_length = config_dd_simulation['wavelength_overlap_length']
                                                         )
-# import pdb; pdb.set_trace()
+import pdb; pdb.set_trace()
+planet_atmosphere = planet.PlanetAtmosphere(planet_dict = planet_dict,
+                                            simulation_dict = simulation_dict,
+                                            star_dict = star_dict,
+                                            wavelength_solution = wavsoln)
 
-################################################################
-#### Interpolate F_star to wavsoln_planet
-F_star = np.zeros((len(phases_star), len(wavsoln)))
-F_star_quiet = np.zeros((len(phases_star), len(wavsoln)))
-
-for ip in range(len(phases_star)):
-    model_spl_star = interpolate.make_interp_spline(wavsoln_star, 
-                                F_star_[ip,:], bc_type='natural')
-    model_spl_star_quiet = interpolate.make_interp_spline(wavsoln_star, 
-                                F_star_quiet_[ip,:], bc_type='natural')
-    F_star[ip,:] = model_spl_star(wavsoln)
-    F_star_quiet[ip,:] = model_spl_star_quiet(wavsoln)
+_, F_planet = planet_atmosphere.get_Fp_or_Rp()
 
 ################################################################
 ################################################################
@@ -214,12 +193,6 @@ plt.ylabel('Phases')
 plt.title('Fp/Fs - Fp/Fs (quiet)')
 plt.savefig(savedir + 'Fp_by_Fs_minus_Fp_by_Fs_quiet_doppler_shifted.png', format = 'png', dpi = 300)
 
-##### Plot the middle 1D Fp/Fs 
-plt.figure(figsize = (18,10))
-plt.plot(wavsoln, Fp_by_Fs[int(len(Fp_by_Fs)/2),:], label = 'active' )
-plt.plot(wavsoln, Fp_by_Fs_quiet[int(len(Fp_by_Fs_quiet)/2),:], label = 'quiet' )
-plt.savefig(savedir + 'Fp_by_Fs_1D_comparison.png', format = 'png', dpi = 300)
-
 ##### Save the outputs
 spdd = {}
 spdd['datacube'] = F_star*(1. + Fp_by_Fs)
@@ -258,8 +231,6 @@ plt.xlabel('Wavelength [nm]')
 plt.ylabel('Phases')
 plt.title('datacube - datacube (quiet)')
 plt.savefig(savedir + 'datacube_minus_datacube_quiet.png', format = 'png', dpi = 300)
-
-
 
 
 exit()

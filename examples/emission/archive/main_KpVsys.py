@@ -25,10 +25,7 @@ plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 # berv = jnp.linspace(0, 40, 40)
 
 ### Load the simulated data 
-#### J band 
-# results_path = '/home/astro/phsprd/code/plastar/examples/emission/results/TEST_emission_dTspot--1100_spot_size-0.2_long-J_band_1120-1125-nm_07-10-2025T14-07-06/'
-#### K band 
-results_path = '/home/astro/phsprd/code/plastar/examples/emission/results/TEST_emission_dTspot--1100_spot_size-0.2_long-K_band_2440-2445-nm_07-10-2025T14-40-18/'
+results_path = '/home/astro/phsprd/code/plastar/examples/emission/results/TEST_emission_dTspot--1100_spot_size-0.2_long-0_18-09-2025T00-03-49/'
 spdd = np.load(results_path + 'spdd.npy', allow_pickle = True).item()
 
 Vsys_range = jnp.linspace(-50, 0, 100)
@@ -41,17 +38,21 @@ phases = jnp.array(spdd['phases'])
 berv = jnp.array(spdd['berv'])
 datacube_only_star_active = spdd['F_star']
 datacube_only_star_quiet = spdd['F_star_quiet']
+
 datacube = spdd['datacube']
 
-
 ## Divide out the median of all exposures as a proxy for stellar correction 
+
 norm_factor_active = np.median(spdd['F_star'], axis = 0)
+
 datacube_active = datacube.copy()
 for ip in range(datacube.shape[0]):
     datacube_active[ip,:] = (datacube_active[ip,:] / norm_factor_active) - 1.
+    
 datacube_active = jnp.array(datacube_active)
 
 import time
+
 start = time.time()
 ccf_active_data_active_model = ccf.compute_logL_map_per_order(datacube_active, modelcube_active, Kp_range, 
                            model_wavsoln, data_wavsoln,
@@ -60,6 +61,8 @@ ccf_active_data_active_model = ccf.compute_logL_map_per_order(datacube_active, m
 ccf_active_data_quiet_model = ccf.compute_logL_map_per_order(datacube_active, modelcube_quiet, Kp_range, 
                            model_wavsoln, data_wavsoln,
                            Vsys_range, phases, berv)
+
+
 
 end = time.time()
 print("Time taken:",(end-start), "seconds")
