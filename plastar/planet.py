@@ -112,6 +112,72 @@ class PlanetAtmosphere():
             ## "h2" is usually not in the free abundances so get its index as well separately.
             self.species_fastchem_indices["h2"] = self.fastchem.getGasSpeciesIndex("H2")
 
+        elif self.chemistry == 'eq_chem_ER':
+            #create a FastChem object
+            #it needs the locations of the element abundance and equilibrium constants files
+            self.include_condensation = self.planet_dict['include_condensation']
+            self.refractories = self.planet_dict['refractories']
+            
+            if self.include_condensation:
+                self.fastchem = pyfastchem.FastChem(
+                FAST_CHEM_DIR + 'input/element_abundances/asplund_2020.dat',
+                FAST_CHEM_DIR +'input/logK/logK.dat',
+                FAST_CHEM_DIR +'input/logK/logK_condensates.dat',
+                1)
+            else:
+                self.fastchem = pyfastchem.FastChem(
+                FAST_CHEM_DIR +'input/element_abundances/asplund_2020.dat',
+                FAST_CHEM_DIR +'input/logK/logK.dat',
+                1)
+            
+            # Make a copy of the solar abundances from FastChem
+            self.solar_abundances = np.array(self.fastchem.getElementAbundances())
+            self.elemental_ratios = self.planet_dict['elemental_ratios']
+            self.log10_O_to_H_by_O_to_H_solar = self.elemental_ratios['log10_O_to_H_by_O_to_H_solar']
+            self.log10_C_to_H_by_C_to_H_solar = self.elemental_ratios['log10_C_to_H_by_C_to_H_solar']
+            if self.refractories is not None:
+                self.log10_R_to_H_by_R_to_H_solar = self.elemental_ratios['log10_R_to_H_by_R_to_H_solar']
+            self.refractories = self.planet_dict['refractories']
+            self.use_C_to_O = False ## By default set for False ALWAYS for this case.
+            
+            self.index_C = self.fastchem.getElementIndex('C')
+            self.index_O = self.fastchem.getElementIndex('O')
+            self.index_H = self.fastchem.getElementIndex('H')
+            
+            # for refrac in self.refractories:
+            #     refrac_fastchem_name = self.species_name_fastchem[refrac]
+            #     ind_refrac = self.fastchem.getElementIndex(refrac_fastchem_name)
+            #     setattr(self, 'index_' + refrac, ind_refrac)
+            # element_abundances = np.copy(self.solar_abundances)
+            # self.C_to_H_solar = element_abundances[self.index_C]/element_abundances[self.index_H]
+            # self.O_to_H_solar = element_abundances[self.index_O]/element_abundances[self.index_H]
+            
+            # self.R_total_solar = 0
+            if self.refractories is not None:
+                for refrac in self.refractories:
+                    refrac_fastchem_name = self.species_name_fastchem[refrac]
+                    ind_refrac = self.fastchem.getElementIndex(refrac_fastchem_name)
+                    setattr(self, 'index_' + refrac, ind_refrac)
+                    # self.R_total_solar =+ element_abundances[ind_refrac]
+                # self.R_to_H_solar = self.R_total_solar/element_abundances[self.index_H]
+            
+            # Create the input and output structures for FastChem
+            self.input_data = pyfastchem.FastChemInput()
+            self.output_data = pyfastchem.FastChemOutput()
+            if self.include_condensation:
+                self.input_data.equilibrium_condensation = True
+            else:
+                self.input_data.equilibrium_condensation = False
+            
+            self.species_fastchem_indices = {}
+            for sp in self.species: ## Only do this for the species we are including in the model
+                # if sp != "h_minus":
+                self.species_fastchem_indices[sp] = self.fastchem.getGasSpeciesIndex(self.species_name_fastchem[sp])
+            ## "h2" is usually not in the free abundances so get its index as well separately.
+            self.species_fastchem_indices["h2"] = self.fastchem.getGasSpeciesIndex("H2")
+            
+        
+        
         if self.TP_type in ['Linear', 'Linear_force_inverted', 'Linear_force_non_inverted']:
             self.P2 = 10.**self.planet_dict['P2']
             self.T2 = self.planet_dict['T2']
@@ -267,6 +333,46 @@ class PlanetAtmosphere():
         number_densities = np.array(self.output_data.number_densities)
         
         return number_densities
+    
+    def get_eqchem_ER_abundances(self):
+        """Given TP profile, and elemental ratios, compute the equilibrium chemistry abundances of the species included in the retrieval. 
+        The outputs from this can be used when constructing the abundances dictionary for GENESIS.
+
+        :return: _description_
+        :rtype: _type_
+        """
+        
+        # Get the solar abundances 
+        element_abundances = np.copy(self.solar_abundances) 
+        
+        # Calculate the value of (C_to_H/C_to_H_solar)
+        C_to_H_by_C_to_H_solar = 10.**(self.log10_C_to_H_by_C_to_H_solar)
+        O_to_H_by_O_to_H_solar = 10.**(self.log10_O_to_H_by_O_to_H_solar)
+
+        # Scale the C and O by their ratios to H
+        element_abundances[self.index_C] *= C_to_H_by_C_to_H_solar
+        element_abundances[self.index_O] *= O_to_H_by_O_to_H_solar
+  
+        # Scale the refractories by R/H ratio
+        if self.refractories is not None:
+            R_to_H_by_R_to_H_solar = 10.**(self.log10_R_to_H_by_R_to_H_solar)
+            for refrac in self.refractories:
+                ind_refrac = getattr(self, 'index_' + refrac)
+                element_abundances[ind_refrac] *= R_to_H_by_R_to_H_solar
+            
+        self.fastchem.setElementAbundances(element_abundances)
+        
+        temp, press = self.get_TP_profile()
+        
+        self.input_data.temperature = temp
+        self.input_data.pressure = press ## pressure is already in bar as calculated by get_TP_profile
+        
+        fastchem_flag = self.fastchem.calcDensities(self.input_data, self.output_data)
+        
+        #convert the output into a numpy array
+        number_densities = np.array(self.output_data.number_densities)
+        
+        return number_densities
 
     @property
     def abundances_dict(self):
@@ -301,6 +407,17 @@ class PlanetAtmosphere():
             ####### Extracting the h_minus from the Fastchem itself.
             for sp in self.species:
                 # print(sp)
+                vmr = number_densities[:, self.species_fastchem_indices[sp]]/gas_number_density
+                X[sp] = vmr 
+            vmr_h2 = number_densities[:, self.species_fastchem_indices["h2"]]/gas_number_density
+            X["h2"] = vmr_h2
+            
+        elif self.chemistry == 'eq_chem_ER':
+            number_densities = self.get_eqchem_ER_abundances()
+            gas_number_density = ( ( press ) *1e6 ) / ( self.k_B_cgs * temp )
+            ####### Extracting the h_minus from the Fastchem itself.
+            
+            for sp in self.species:
                 vmr = number_densities[:, self.species_fastchem_indices[sp]]/gas_number_density
                 X[sp] = vmr 
             vmr_h2 = number_densities[:, self.species_fastchem_indices["h2"]]/gas_number_density

@@ -10,8 +10,9 @@ from plastar import utils
 from plastar import planet
 from plastar import ccf
 from astropy.io import fits
-from spotter import show, viz
+from spotter import show, viz, core
 # from jax.numpy import interp
+import healpy as hp
 
 from tqdm import tqdm
 import imageio.v2 as imageio # Use imageio.v2 for the current API
@@ -35,7 +36,7 @@ plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 now = datetime.datetime.now()
 # Format the date and time
 d1 = now.strftime("%d-%m-%YT%H-%M-%S")
-print('Date tag for this run which will be used to save the results: ', d1)
+# print('Date tag for this run which will be used to save the results: ', d1)
 
 ################################################################
 """Read in the config files."""
@@ -48,17 +49,27 @@ print('Date tag for this run which will be used to save the results: ', d1)
 
 # config_file_path = args['config_file_path']
 
-with open('./config/star.yaml') as f:
+config_file_path = '/home/astro/phsprd/code/plastar/examples/emission/config/main/'
+
+with open(config_file_path+'star.yaml') as f:
     config_dd_star = yaml.load(f,Loader=yaml.FullLoader)
-with open('./config/planet.yaml') as f:
+with open(config_file_path+'planet.yaml') as f:
     config_dd_planet = yaml.load(f,Loader=yaml.FullLoader)
-with open('./config/telluric.yaml') as f:
+with open(config_file_path+'telluric.yaml') as f:
     config_dd_telluric = yaml.load(f,Loader=yaml.FullLoader)
-with open('./config/simulation.yaml') as f:
+with open(config_file_path+'simulation.yaml') as f:
     config_dd_simulation = yaml.load(f,Loader=yaml.FullLoader)
 
-
-infostring = config_dd_simulation['infostring'] + d1
+# dTspot--1100_spot_size-0.2_long-0_vsini-10_CRIRES_K-band_2280-2330-nm_
+dTspot = str(config_dd_star['spots_and_faculae']['delta_teff'][0])
+spot_size = str(config_dd_star['spots_and_faculae']['rad'][0])
+long0 = str(config_dd_star['spots_and_faculae']['lon'][0])
+vsini = str(config_dd_star['star']['v_eq'])
+waverange = [str(config_dd_simulation['instrument']['wavelength_common_min']), 
+            str(config_dd_simulation['instrument']['wavelength_common_max'])]
+instrument = config_dd_simulation['instrument']['name']
+addinfo = f'dTspot-{dTspot}_spot_size-{spot_size}_long-{long0}_vsini-{vsini}_{instrument}_{waverange[0]}-{waverange[1]}-nm'
+infostring = config_dd_simulation['infostring'] + addinfo
 savedir = config_dd_simulation['simulations_savedir'] + infostring + '/'
 
 star_dict = config_dd_star['star']
@@ -72,10 +83,10 @@ try:
 except OSError:
     savedir = savedir
     
-copyfile('./config/star.yaml', savedir + 'star.yaml')
-copyfile('./config/planet.yaml', savedir + 'planet.yaml')
-copyfile('./config/telluric.yaml', savedir + 'telluric.yaml')
-copyfile('./config/simulation.yaml', savedir + 'simulation.yaml')
+copyfile(config_file_path+'star.yaml', savedir + 'star.yaml')
+copyfile(config_file_path+'planet.yaml', savedir + 'planet.yaml')
+copyfile(config_file_path+'telluric.yaml', savedir + 'telluric.yaml')
+copyfile(config_file_path+'simulation.yaml', savedir + 'simulation.yaml')
 
 ################################################################
 """Compute the planetary flux first."""
@@ -93,26 +104,26 @@ wavsoln, F_planet = planet_atmosphere.get_Fp_or_Rp()
 ################################################################
 """Read in the PHOENIX models for star and spots and splice and convolve to instrument resolution."""
 ################################################################
-wavsoln_model_star, flux_model_star = utils.get_stellar_spectral_models_phoenix(config_file_path = './config/')
-wavsoln_model_spot, flux_model_spot = utils.get_spot_spectral_models_phoenix(config_file_path = './config/')
+wavsoln_model_star, flux_model_star = utils.get_stellar_spectral_models_phoenix(config_file_path = config_file_path)
+wavsoln_model_spot, flux_model_spot = utils.get_spot_spectral_models_phoenix(config_file_path = config_file_path)
 
 ################################################################
 """Get the phases for the star and the planet, and the time stamps of the observation."""
 ################################################################
-phases_planet, phases_star, time_stamps = utils.get_star_planet_phases(config_file_path = './config/')
-
+# phases_planet, phases_star, time_stamps = utils.get_star_planet_phases(config_file_path = config_file_path)
+phases_planet, time_stamps = utils.get_star_planet_phases(config_file_path = config_file_path)
 ################################################################
 ################################################################
 """Create the instance for the StellarGrid and compute the spectral time series."""
 ################################################################
 ################################################################
-
+print('Starting stellar flux calculation...')
 star_grid = grid.StellarGrid(star_dict = star_dict, spots_and_faculae_dict = spots_and_faculae_dict,
                              planet_dict = planet_dict, 
                         wavsoln = wavsoln_model_star,
-                        include_spots_and_faculae = True, include_planet = True)
+                        include_spots_and_faculae = True, include_planet = False)
 
-star, F_star_quiet_, wavsoln_star = star_grid.get_spectral_time_series(time=time_stamps, 
+star_quiet, F_star_quiet_, wavsoln_star = star_grid.get_spectral_time_series(time=time_stamps, 
                                                             stellar_spectrum = flux_model_star, 
                                                         spot_spectra = flux_model_spot, 
                                                         include_spots_and_faculae = False,
@@ -127,14 +138,35 @@ star, F_star_, wavsoln_star = star_grid.get_spectral_time_series(time=time_stamp
                                                         wavelength_chunk_length = config_dd_simulation['wavelength_chunk_length'], 
                                                         wavelength_overlap_length = config_dd_simulation['wavelength_overlap_length']
                                                         )
-# import pdb; pdb.set_trace()
 
+print('Stellar flux calculation done!')
+
+# N, n_n = core._N_or_Y_to_N_n(star.y[0])
+# spot_cen_pix = hp.ang2pix(N, np.pi/2, 0)
+
+# plt.figure()
+# # plt.plot(wavsoln_star, F_star_[0,:,spot_cen_pix], label = 'active')
+# # plt.plot(wavsoln_star, F_star_quiet_[0,:,spot_cen_pix], label = 'quiet')
+# plt.plot(wavsoln_star, F_star_[0,:,spot_cen_pix], label = 'active')
+# plt.plot(wavsoln_star, F_star_quiet_[0,:,spot_cen_pix], label = 'quiet')
+# plt.legend()
+# plt.savefig(savedir + 'design_matrix_test.png', dpi = 300, format = 'png')
+
+# plt.figure()
+# plt.plot(F_star_[0,0,97450:97622], label = 'active')
+# plt.plot(F_star_quiet_[0,0,97450:97622], label = 'quiet')
+# plt.plot(F_star_[2,0,97450:97622], linestyle = 'dashed', label = 'active')
+# plt.plot(F_star_quiet_[2,0,97450:97622], linestyle = 'dashed', label = 'quiet')
+# plt.legend()
+# plt.savefig(savedir + 'projected_area_at_equator.png', dpi = 300, format = 'png')
+
+# import pdb; pdb.set_trace()
 ################################################################
 #### Interpolate F_star to wavsoln_planet
-F_star = np.zeros((len(phases_star), len(wavsoln)))
-F_star_quiet = np.zeros((len(phases_star), len(wavsoln)))
+F_star = np.zeros((len(phases_planet), len(wavsoln)))
+F_star_quiet = np.zeros((len(phases_planet), len(wavsoln)))
 
-for ip in range(len(phases_star)):
+for ip in range(len(phases_planet)):
     model_spl_star = interpolate.make_interp_spline(wavsoln_star, 
                                 F_star_[ip,:], bc_type='natural')
     model_spl_star_quiet = interpolate.make_interp_spline(wavsoln_star, 
@@ -170,7 +202,7 @@ for ip in range(len(phases_planet)):
 
 ## Doppler shift F_star by Vsys and berv 
 F_star_shifted = np.ones((len(phases_planet), len(wavsoln[wav_com_min_ind:wav_com_max_ind]) ))
-for ip in range(len(phases_star)):
+for ip in range(len(phases_planet)):
     F_star_spl = interpolate.make_interp_spline(wavsoln, F_star[ip,:])
     RV_star = star_dict['Vsys'] + berv[ip]
     # wavsoln_shifted = ccf.doppler_shift_wavsoln(RV_star, wavsoln[wav_com_min_ind:wav_com_max_ind])
@@ -179,7 +211,7 @@ for ip in range(len(phases_star)):
     F_star_shifted[ip,:] = F_star_spl(wavsoln_shifted)
     
 F_star_quiet_shifted = np.ones((len(phases_planet), len(wavsoln[wav_com_min_ind:wav_com_max_ind]) ))
-for ip in range(len(phases_star)):
+for ip in range(len(phases_planet)):
     F_star_quiet_spl = interpolate.make_interp_spline(wavsoln, F_star_quiet[ip,:])
     RV_star = star_dict['Vsys'] + berv[ip]
     wavsoln_shifted = ccf.doppler_shift_wavsoln(RV_star, wavsoln[wav_com_min_ind:wav_com_max_ind])
@@ -211,6 +243,26 @@ plt.xlabel('Wavelength [nm]')
 plt.ylabel('Phases')
 plt.title('Fs')
 plt.savefig(savedir + 'Fs_doppler_shifted.png', format = 'png', dpi = 300)
+
+plt.figure(figsize = (18,10))
+plt.plot(wavsoln_orig, F_star[0,:], label = 'First exposure, Active', color = 'k')
+plt.plot(wavsoln_orig, F_star[-1,:], label = 'Last exposure, Active', color = 'r')
+plt.plot(wavsoln_orig, F_star_quiet[0,:], label = 'First exposure, Quiet', color = 'k', linestyle = 'dashed')
+plt.plot(wavsoln_orig, F_star_quiet[-1,:], label = 'Last exposure, Quiet', color = 'r', linestyle = 'dashed')
+plt.xlabel('Wavelength [nm]')
+plt.ylabel('Fs')
+plt.title('Fs')
+plt.legend()
+plt.savefig(savedir + 'Fs_1D_orig_shifted.png', format = 'png', dpi = 300)
+
+plt.figure(figsize = (18,10))
+plt.plot(wavsoln_orig, F_star[0,:]/F_star_quiet[0,:], label = 'First exposure, Active/Quiet', color = 'k')
+plt.plot(wavsoln_orig, F_star[-1,:]/F_star_quiet[-1,:], label = 'Last exposure, Active/Quiet', color = 'r')
+plt.xlabel('Wavelength [nm]')
+plt.ylabel('Fs')
+plt.title('Fs')
+plt.legend()
+plt.savefig(savedir + 'Fs_1D_orig_Active_by_Quiet_shifted.png', format = 'png', dpi = 300)
 
 plt.figure(figsize = (18,10))
 Fp_by_Fs = F_planet_shifted/F_star_shifted
@@ -292,10 +344,6 @@ plt.ylabel('Phases')
 plt.title('datacube - datacube (quiet)')
 plt.savefig(savedir + 'datacube_minus_datacube_quiet.png', format = 'png', dpi = 300)
 
-
-
-
-exit()
 # plt.figure()
 # plt.plot(wavsoln, Fp/flux[0], label = 'Fp/Fs')
 # plt.savefig(savedir + 'Fp_by_Fs.png', format = 'png', dpi = 300)
@@ -319,10 +367,10 @@ exit()
 output_video_path = savedir + 'output_spectrum.mp4'
 fps = 1 # Frames per second for the output video
 dpi = 300
-num_frames = len(phases_star)
+num_frames = len(phases_planet)
 
 images_in_memory = []
-for ip, phase_star in enumerate(phases_star):
+for ip, phase_star in enumerate(star.phase(time_stamps)):
     print(phase_star)
     fig, axes = plt.subplots(nrows = 1, ncols = 2, figsize=(25, 15))
     

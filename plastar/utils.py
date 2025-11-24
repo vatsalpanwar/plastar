@@ -58,7 +58,7 @@ def get_stellar_spectral_models_phoenix(config_file_path = None):
                             cache=True)
     # Convert the spectrum to desired units 
     wavsoln_model = jnp.array(spectrum.wavelength.value/10.) # Convert wavelengths to nm 
-    flux_model = jnp.array(spectrum.flux.value * 1e-7 * 1e4 * 1e2) * R_solar_squared # Convert to SI units, and scale by R_sun^2 (because the stellar radius is defined in solar radius.)
+    flux_model = jnp.array(spectrum.flux.value * 1e-7 * 1e4 * 1e2) * R_solar_squared # Convert to SI units (J/s), and scale by R_sun^2 (because the stellar radius is defined in solar radius.)
     
     # Get the indices corresponding to the desired walvength grid 
     wav_inds = [ jnp.argmin(abs(wavsoln_model-lam_nm[0])) , jnp.argmin(abs(wavsoln_model-lam_nm[-1])) ]
@@ -150,7 +150,9 @@ def get_star_planet_phases(config_file_path = None):
     ## Planet 
     phase_range = config_dd_simulation['phase_range']
     time_range = config_dd_planet['orbper'] * np.array(phase_range) ## In days
-
+    ## Make the first time step 0: 
+    time_range = time_range - time_range[0]
+    
     ## Calculate the time stamps for the simulation, using the start and end time based on the planetary orbital phase.
     time_stamps = np.arange(time_range[0], time_range[1], config_dd_simulation['time_step']/(3600.*24)) ## In days
     print("Number of time stamps: ", len(time_stamps))
@@ -158,11 +160,12 @@ def get_star_planet_phases(config_file_path = None):
 
     ## Star
     ## Get the zeroth time stamp for the star, for the simulation 
-    time_stamp0_star = config_dd_simulation['planet_phase_at_star_phase0']*config_dd_planet['orbper']
-    star_period = ( (2 * np.pi * config_dd_star['star']['Rs'] * un.Rsun) / (config_dd_star['star']['v_eq'] * un.km / un.s) ).to(un.day)
-    phases_star = (time_stamps - time_stamp0_star)/star_period.value
+    # time_stamp0_star = config_dd_simulation['planet_phase_at_star_phase0']*config_dd_planet['orbper']
+    # star_period = ( (2 * np.pi * config_dd_star['star']['Rs'] * un.Rsun) / (config_dd_star['star']['v_eq'] * un.km / un.s) ).to(un.day)
+    # phases_star = (time_stamps - time_stamp0_star)/star_period.value
     
-    return phases_planet, phases_star, time_stamps
+    # return phases_planet, phases_star, time_stamps
+    return phases_planet, time_stamps
 
 
 def create_overlapping_chunks(arr, chunk_length, overlap_length):
@@ -251,3 +254,55 @@ def create_doppler_shifted_sequence(spectrum = None, wavelength = None, rv_array
         
         spectrum_shifted[irv, :] = model_spl(wavelength_shifted)
     return spectrum_shifted
+
+
+
+''' Generating a sequence of PWV values which is log-normally distributed, with
+scaling parameters tuned to the measured PWV distribution at Cerro Paranal.
+- tExp: length of each observations in seconds, including overheads
+- size: number of spectra in the sequence
+- s, scale, pace: hardcoded parameters tuned to Paranal (from Valentino's thesis)
+=> pwvVector: the generated PWV vector
+
+Consider fixing the seed of the random number generator to the following 4 values:
+seeds = [2001,2006,2008,2009] (so you have 4 different sequences) using np.random.seed(seed_value). In my own tests, this gives you 
+sequences where the mean PWM is slightly better, on par and worse than the yearly average at Paranal.
+'''
+def get_random_pwv(tExp, size, s=0.69598, scale=3.0862, pace=6e5, seed_value = None):
+    np.random.seed(seed_value) 
+    timespan = tExp * size # Total timespan of the simulated sequence
+    dt = timespan / size
+    pace /= dt
+    p = pace / (pace + 1)
+
+    random = np.random.normal(size=size)
+    v = random[0] / np.sqrt(1 - p ** 2)
+    sequence = np.empty(size)
+    sequence[0] = v
+    for i in range(1, size):
+        v = v * p + random[i]
+        sequence[i] = v
+    sequence *= np.sqrt(1 - p ** 2)
+
+    sequence *= s
+    pwvVector = np.exp(sequence)
+    pwvVector *= scale
+    return pwvVector
+
+def get_gaussian_kernel(size = None, sigma = None):
+    x = np.arange(-size // 2 + 1, size // 2 + 1)
+    # x = np.linspace(-int(span/2), int(span/2)+1, num = 200)
+    kernel = np.exp(-x**2 / (2 * sigma**2))
+    return kernel / np.sum(kernel)  # Normalize the kernel
+
+def convolve_spectra_to_instrument_resolution(instrument_resolution = None, model_resolution = None, model_spec_orig = None):
+    
+    delwav_by_wav = 1/instrument_resolution # for the instrument (value is 1/100000 for crires and 1/45000 for igrins) 
+    delwav_by_wav_model = 1./model_resolution   ### np.diff(model_wav)/model_wav[1:]
+    
+    FWHM = np.mean(delwav_by_wav/delwav_by_wav_model)
+    sig = FWHM / (2. * np.sqrt(2. * np.log(2.) ) )
+    gauss_kernel = get_gaussian_kernel(size = sig*10, sigma = sig)
+    # model_spec = np.convolve(model_spec_orig)           
+    model_spec = np.convolve(model_spec_orig, gauss_kernel, mode = 'same')
+    return model_spec

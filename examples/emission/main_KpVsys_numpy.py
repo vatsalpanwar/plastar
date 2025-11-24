@@ -34,14 +34,16 @@ results_root = '/home/astro/phsprd/code/plastar/examples/emission/results/'
 #### K band 
 # results_path = results_root + 'TEST_rev_emission_dTspot--1100_spot_size-0.2_long-K_band_2440-2445-nm_21-10-2025T11-34-00/'
 
-results_path = results_root + 'TEST_rev_emission_dTspot--1100_spot_size-0.2_long-K_band_2440-2445-nm_21-10-2025T12-09-10/'
+results_path = results_root + 'MAIN_emission_dTspot--1100_spot_size-0.2_long-0_CRIRES_K-band_2280-2330-nm_24-10-2025T14-55-15/'
 addinfo = 'numpy'
 
 spdd = np.load(results_path + 'spdd.npy', allow_pickle = True).item()
 # Vsys_range = np.linspace(-50, 50, 100)
 # Kp_range = np.linspace(100., 200, 100)
-Vsys_range = np.linspace(-50, 50, 100)
-Kp_range = np.linspace(120., 180, 60)
+# Vsys_range = np.linspace(-50, 50, 100)
+# Kp_range = np.linspace(120., 180, 60)
+Vsys_range = np.linspace(-30, 0, 30)
+Kp_range = np.linspace(130, 170, 40)
 # modelcube_active = jnp.array(spdd['Fp_by_Fs'])
 # modelcube_quiet = jnp.array(spdd['Fp_by_Fs_quiet'])
 
@@ -57,8 +59,8 @@ modelcube_Fs_quiet = np.array(spdd['F_star_quiet_orig'])
 datacube_only_star_active = spdd['F_star']
 datacube_only_star_quiet = spdd['F_star_quiet']
 
-# datacube = spdd['datacube']
-datacube = spdd['F_star'] + spdd['F_planet'] * 50.
+datacube = spdd['datacube']
+# datacube = spdd['F_star'] # + spdd['F_planet'] 
 
 SNR = 100
 ### Add noise to the datacube 
@@ -74,7 +76,7 @@ plt.colorbar()
 plt.xlabel('Wavelength [nm]')
 plt.ylabel('Phases')
 plt.title('datacube with added noise')
-plt.savefig(results_path + 'datacube_noisy.png', format = 'png', dpi = 300)
+plt.savefig(results_path + 'datacube_noisy_'+addinfo+'.png', format = 'png', dpi = 300)
 
 ## Divide out the median of all exposures as a proxy for stellar correction 
 # norm_factor_active = np.median(spdd['F_star_quiet'], axis = 0)
@@ -103,7 +105,7 @@ plt.colorbar()
 plt.xlabel('Wavelength [nm]')
 plt.ylabel('Phases')
 # plt.title('datacube norm by median of first exp')
-plt.savefig(results_path + 'datacube_corrected.png', format = 'png', dpi = 300)
+plt.savefig(results_path + 'datacube_corrected_'+addinfo+'.png', format = 'png', dpi = 300)
 
 
 import time

@@ -166,7 +166,9 @@ class StellarGrid:
             spots = []
             base_star = self.star
             for ihet in range(self.N_het):
-                spot = core.spot(self.star.sides, self.spot_lat_array[ihet], self.spot_lon_array[ihet], self.spot_radius_array[ihet], sharpness = 20)#  sharpness = self.spot_sharpness_array[ihet] ) 
+                spot = core.spot(self.star.sides, self.spot_lat_array[ihet], 
+                                 self.spot_lon_array[ihet], self.spot_radius_array[ihet], 
+                                 sharpness = 1000)#  sharpness = self.spot_sharpness_array[ihet] ) 
                 spots.append(spot)
 
             
@@ -177,9 +179,10 @@ class StellarGrid:
             spectra = base_star.y * stellar_spectrum[:, None]
                         
             # Compute the spectrum to be assigned for the points where there are spots. Subtract the stellar spectrum for these points as that has already been assigned to these points before. 
+            
             for isp, sp in enumerate(spots):
                 spectra = spectra + sp[None,:] * (spot_spectra[isp][:, None] - stellar_spectrum[:, None])
-            
+                # spectra = spectra + sp[None,:] * (spot_spectra[isp][:, None]) # - stellar_spectrum[:, None] VERIFY THIS! 15-11-2025
             
             star = base_star.set(y = spectra, wv = 1e-9 * wavelength_solution)
             
@@ -187,6 +190,7 @@ class StellarGrid:
             base_star = self.star
             spectra = base_star.y * stellar_spectrum[:, None]
             star = base_star.set(y = spectra, wv = 1e-9 * wavelength_solution)
+        
         
         return star
     
@@ -227,10 +231,9 @@ class StellarGrid:
             step = wavelength_chunk_length - wavelength_overlap_length
             merged_length = (chunked_stellar_spectrum.shape[0] - 1) * step + wavelength_chunk_length
             
-            
+            integrated_spectrum = np.zeros((len(time), chunked_stellar_spectrum.shape[0], chunked_stellar_spectrum.shape[1]))
             if self.include_planet:
                 x, y, z = self.planet_coords(time)
-                integrated_spectrum = np.zeros((len(time), chunked_stellar_spectrum.shape[0], chunked_stellar_spectrum.shape[1]))
                 merged_integrated_spectrum = np.zeros((len(time), merged_length))
                 
             for ichunk in tqdm(range(chunked_stellar_spectrum.shape[0])):
@@ -241,7 +244,7 @@ class StellarGrid:
                 if self.include_planet:
                     integrated_spectrum[:,ichunk,:] = transit_spectrum(star, time, x, y, z, self.planet_radius, normalize = False)
                 else:
-                    integrated_spectrum[ichunk,:] = spectrum(star, time, normalize = False)
+                    integrated_spectrum[:,ichunk,:] = spectrum(star, time, normalize = False)
 
             ## Merge the chunks back, accounting for the overlap
             merged_wavelength_solution = utils.merge_chunks_back(chunked_wavelength_solution, wavelength_chunk_length, wavelength_overlap_length)
@@ -253,6 +256,73 @@ class StellarGrid:
                 merged_integrated_spectrum = utils.merge_chunks_back(integrated_spectrum, wavelength_chunk_length, wavelength_overlap_length)
 
             return star, merged_integrated_spectrum, merged_wavelength_solution
+    
+    
+    ## Probs don't need this 
+    # def set_spectral_values_for_viz(self, time=None, stellar_spectrum = None, spot_spectra = None, include_spots_and_faculae = False, wavelength_chunk_length = None, wavelength_overlap_length = None):
+    #     """
+    #     Set spectral values for the grid, at a given wavelength or wavelength range, to create a stellar grid visual for just that wavelength range.
+        
+    #     Parameters:
+    #     - star: The star object.
+    #     - t: Time array.
+    #     - include_spots_and_faculae: Boolean indicating whether to include spots and faculae.
+        
+    #     Returns:
+    #     - spectrum: The spectral time series.
+    #     """
+        
+        
+    #     if wavelength_chunk_length is None: # Could also consider chunking in time.
+    #         star = self.set_spectral_values(stellar_spectrum = stellar_spectrum, spot_spectra = spot_spectra, 
+    #                                         wavelength_solution = self.wavsoln,
+    #                                         include_spots_and_faculae = include_spots_and_faculae)
+    #         if self.include_planet:
+    #             x, y, z = self.planet_coords(time)
+    #             return star, transit_spectrum(star, time, x, y, z, self.planet_radius, normalize = False), self.wavsoln
+    #         else:
+    #             return star, spectrum(star, time, normalize = False), self.wavsoln
+    #     else:
+    #         chunked_stellar_spectrum = utils.create_overlapping_chunks(stellar_spectrum, wavelength_chunk_length, wavelength_overlap_length)
+    #         chunked_wavelength_solution = utils.create_overlapping_chunks(self.wavsoln, wavelength_chunk_length, wavelength_overlap_length)
+            
+    #         chunked_spot_spectra = []
+    #         for isp in range(spot_spectra.shape[0]):
+    #             chunked_spot_spectrum = utils.create_overlapping_chunks(spot_spectra[isp,:], wavelength_chunk_length, wavelength_overlap_length)
+    #             chunked_spot_spectra.append(chunked_spot_spectrum)
+    #         chunked_spot_spectra = np.array(chunked_spot_spectra)
+
+    #         ### Calculate the length of the merged integrated spectrum, may not be the same as the original wavelength solution because of chunks being all the same length.
+    #         step = wavelength_chunk_length - wavelength_overlap_length
+    #         merged_length = (chunked_stellar_spectrum.shape[0] - 1) * step + wavelength_chunk_length
+            
+            
+    #         if self.include_planet:
+    #             x, y, z = self.planet_coords(time)
+    #             integrated_spectrum = np.zeros((len(time), chunked_stellar_spectrum.shape[0], chunked_stellar_spectrum.shape[1]))
+    #             merged_integrated_spectrum = np.zeros((len(time), merged_length))
+                
+    #         for ichunk in tqdm(range(chunked_stellar_spectrum.shape[0])):
+    #             star = self.set_spectral_values(stellar_spectrum = chunked_stellar_spectrum[ichunk,:], 
+    #                                             spot_spectra = chunked_spot_spectra[:,ichunk,:], 
+    #                                             wavelength_solution = chunked_wavelength_solution[ichunk,:],
+    #                                             include_spots_and_faculae = include_spots_and_faculae)
+            
+    #             if self.include_planet:
+    #                 integrated_spectrum[:,ichunk,:] = transit_spectrum(star, time, x, y, z, self.planet_radius, normalize = False)
+    #             else:
+    #                 integrated_spectrum[ichunk,:] = spectrum(star, time, normalize = False)
+
+    #         ## Merge the chunks back, accounting for the overlap
+    #         merged_wavelength_solution = utils.merge_chunks_back(chunked_wavelength_solution, wavelength_chunk_length, wavelength_overlap_length)
+            
+    #         if self.include_planet:
+    #             for itime in range(len(time)):
+    #                 merged_integrated_spectrum[itime,:] = utils.merge_chunks_back(integrated_spectrum[itime,:,:], wavelength_chunk_length, wavelength_overlap_length)
+    #         else:
+    #             merged_integrated_spectrum = utils.merge_chunks_back(integrated_spectrum, wavelength_chunk_length, wavelength_overlap_length)
+
+    #         return star, merged_integrated_spectrum, merged_wavelength_solution
             
 
                 

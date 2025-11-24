@@ -1,0 +1,241 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+import datetime
+import os
+import argparse
+import yaml
+import jax.numpy as jnp
+from plastar import grid
+from plastar import utils
+from astropy.io import fits
+from spotter import show, viz
+from tqdm import tqdm
+import imageio.v2 as imageio # Use imageio.v2 for the current API
+from shutil import copyfile
+
+SMALL_SIZE = 20
+MEDIUM_SIZE = 25
+BIGGER_SIZE = 30
+
+plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
+plt.rc('axes', titlesize=SMALL_SIZE)     # fontsize of the axes title
+plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
+plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+plt.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize
+plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
+
+################################################################
+################################################################
+now = datetime.datetime.now()
+# Format the date and time
+d1 = now.strftime("%d-%m-%YT%H-%M-%S")
+print('Date tag for this run which will be used to save the results: ', d1)
+
+################################################################
+"""Read in the config files."""
+################################################################
+# parser = argparse.ArgumentParser(description='Read the user inputs.')
+# parser.add_argument('-cfg','--config_file_path', help = "Path to the croc_config.yaml.",
+#                     type=str, required=False)
+
+# args = vars(parser.parse_args())
+
+# config_file_path = args['config_file_path']
+
+with open('./config/star.yaml') as f:
+    config_dd_star = yaml.load(f,Loader=yaml.FullLoader)
+with open('./config/planet.yaml') as f:
+    config_dd_planet = yaml.load(f,Loader=yaml.FullLoader)
+with open('./config/telluric.yaml') as f:
+    config_dd_telluric = yaml.load(f,Loader=yaml.FullLoader)
+with open('./config/simulation.yaml') as f:
+    config_dd_simulation = yaml.load(f,Loader=yaml.FullLoader)
+
+
+infostring = config_dd_simulation['infostring'] + d1
+savedir = config_dd_simulation['simulations_savedir'] + infostring + '/'
+
+star_dict = config_dd_star['star']
+spots_and_faculae_dict = config_dd_star['spots_and_faculae']
+planet_dict = config_dd_planet
+
+"""Create the directory to save results."""
+try:
+    os.makedirs(savedir)
+except OSError:
+    savedir = savedir
+    
+copyfile('./config/star.yaml', savedir + 'star.yaml')
+copyfile('./config/planet.yaml', savedir + 'planet.yaml')
+copyfile('./config/telluric.yaml', savedir + 'telluric.yaml')
+copyfile('./config/simulation.yaml', savedir + 'simulation.yaml')
+
+################################################################
+"""Read in the PHOENIX models for star and spots and splice and convolve to instrument resolution."""
+################################################################
+wavsoln_model_star, flux_model_star = utils.get_stellar_spectral_models_phoenix(config_file_path = './config/')
+wavsoln_model_spot, flux_model_spot = utils.get_spot_spectral_models_phoenix(config_file_path = './config/')
+
+################################################################
+"""Get the phases for the star and the planet, and the time stamps of the observation."""
+################################################################
+phases_planet, phases_star, time_stamps = utils.get_star_planet_phases(config_file_path = './config/')
+
+################################################################
+################################################################
+"""Create the instance for the StellarGrid and compute the spectral time series."""
+################################################################
+################################################################
+
+star_grid = grid.StellarGrid(star_dict = star_dict, spots_and_faculae_dict = spots_and_faculae_dict,
+                             planet_dict = planet_dict, 
+                        wavsoln = wavsoln_model_star,
+                        include_spots_and_faculae = True, include_planet = True)
+
+star, flux, wavsoln = star_grid.get_spectral_time_series(time=time_stamps, 
+                                                            stellar_spectrum = flux_model_star, 
+                                                        spot_spectra = flux_model_spot, 
+                                                        include_spots_and_faculae = True,
+                                                        wavelength_chunk_length = config_dd_simulation['wavelength_chunk_length'], 
+                                                        wavelength_overlap_length = config_dd_simulation['wavelength_overlap_length']
+                                                        )
+print(wavsoln)
+## Confirm this is within +-v sini ; Try converting wavsoln to RV
+c_ms = 299792458.
+rv_soln = ((wavsoln - 2468.7)/2468.7)*c_ms
+# rv_width = 3.5 * 1e3
+# wv_width = (rv_width/c_ms)
+
+xp, yp, zp = star_grid.planet_coords(time_stamps)
+light_curve = np.sum(flux, axis = 1)/np.max(np.sum(flux, axis = 1))
+light_curve_unnorm = np.sum(flux, axis = 1)
+
+plt.figure()
+# plt.plot(phases_planet, np.sum(flux, axis = 1)/np.max(np.sum(flux, axis = 1)) )
+plt.plot(phases_planet, light_curve )
+plt.savefig(savedir + 'output_light_curve.png', dpi = 300, format = 'png')
+
+"""Make a 2D plot of the out - in flux """
+# in_minus_out = (flux[:,:]-flux[0,:])/flux[0,:]
+# in_minus_out = (flux[:,:]-flux[0,:])
+in_div_out = (flux[:,:]/flux[0,:])/light_curve[:,None]
+# in_div_out = (flux[:,:]/flux[0,:])
+# for iw in range(in_div_out.shape[1]):
+#     in_div_out[:,iw] = in_div_out[:,iw]/light_curve
+
+
+# in_minus_out = (flux[:,:]-flux[0,:])/light_curve[:,None]
+plt.figure(figsize = (18,10))
+# plt.pcolormesh(wavsoln, phases_planet, in_minus_out,
+#                norm = mpl.colors.Normalize(vmin=np.min(in_minus_out), vmax=np.max(in_minus_out)))
+            #    norm = mpl.colors.Normalize(vmin=0.01, vmax=np.max(out_minus_in)))
+# plt.pcolormesh(wavsoln, phases_planet, in_div_out)
+# plt.pcolormesh(rv_soln/1000, phases_planet[10:-10], in_minus_out[10:-10, :])
+# plt.pcolormesh(rv_soln/1000, phases_planet, in_div_out)
+plt.pcolormesh(wavsoln, phases_planet, in_div_out)
+# plt.axvline(x = -star_dict['v_eq'], color = 'w', linestyle = 'dashed' )
+# plt.axvline(x = star_dict['v_eq'], color = 'w', linestyle = 'dashed' )
+
+plt.colorbar()
+# plt.title('(flux[:,:]-flux[0,:])/flux[0,:]')
+# plt.title('(flux[:,:]-flux[0,:])')
+plt.title('(flux[:,:]/flux[0,:])/light_curve')
+plt.xlabel('Wavelength [nm]')
+plt.ylabel('Phases')
+plt.savefig(savedir + 'doppler_in_minus_out.png', dpi = 300, format = 'png')
+# plt.savefig(savedir + 'doppler_in_div_out_lc_norm.png', dpi = 300, format = 'png')
+
+# exit()
+
+"""Make the video"""
+output_video_path = savedir + 'output_spectrum.mp4'
+fps = 1 # Frames per second for the output video
+dpi = 300
+num_frames = len(phases_star)
+
+images_in_memory = []
+for ip, phase_star in enumerate(phases_star):
+    print(phase_star)
+    fig, axes = plt.subplots(nrows = 1, ncols = 2, figsize=(25, 15))
+    
+    ax = axes[0]
+    ### Show the star first for this phase  
+    # show(star, phase = phase_star, ax=ax, rv = True, radius = star.radius, period = star.period)
+    viz.show(
+    star.y[0],
+    inc=star.inc,
+    obl=star.obl if star.obl is not None else 0.0,
+    u=star.u[0],
+    xsize=800,
+    phase=phase_star,
+    ax=ax,
+    radius=star.radius,
+    period=star.period,
+    rv=True)
+    
+    # viz.show(star.y, u=star.u[0])
+    circle = plt.Circle((xp[ip], yp[ip]), star_grid.planet_radius, color="0.1", zorder=10)
+    ax.add_artist(circle)
+    
+    ax = axes[1]
+    
+    ### Plot the spotty and non-spotty spectrum 
+    print( np.mean(flux[0,:]), np.mean(flux[ip,:]) )
+    print( flux[ip,:] - flux[0,:] )
+    # ax.plot(wavsoln, flux[ip,:]-flux[0,:], 
+    #     c="k", lw=1, label='flux[ip,:] - flux[0,:]')
+    if ip == 0:
+        phases_planet_splice = np.array([phases_planet[0]])
+        in_div_out_splice = np.array([in_div_out[0,:]])
+    else:
+        phases_planet_splice = phases_planet[0:ip]
+        in_div_out_splice = in_div_out[0:ip,:]
+    # import pdb; pdb.set_trace()
+    map = ax.pcolormesh(wavsoln, phases_planet_splice, in_div_out_splice,
+                        norm = mpl.colors.Normalize(vmin=np.min(in_div_out), vmax=np.max(in_div_out) ) )
+    cbar = fig.colorbar(map, ax=ax, orientation = 'vertical')
+    cbar.set_label('Flux')
+    # ax.plot(wavsoln, flux[0,:], c="k", lw=1, label='F(t=0)')
+    # ax.plot(wavsoln, (flux[ip,:]/light_curve[ip]) - flux[0,:], c="r", lw=1, label='F(t)')
+    # import pdb; pdb.set_trace()
+    # ax.plot(wavsoln, flux[ip,:]/light_curve[ip], c="r", lw=1, label='F(t)/light_curve')
+    
+    ax.legend()
+    # ax.axis("off")
+    ax.set_xlabel('Wavelength [nm]')
+    # ax.set_ylabel(' F(t) - F(t=0)')
+    # ax.set_ylabel('(flux[ip,:]/light_curve[ip]) - flux[0,:]')
+    # ax.set_ylabel('flux[ip,:] - flux[0,:]')
+    ax.set_ylabel('In Transit / Out of Transit')
+    ax.set_ylim(min(phases_planet), max(phases_planet))
+    # plt.savefig(savedir + 'output_spectrum_phase_'+str(ip)+'.png', dpi = 300, format = 'png')
+    
+    # Important: Draw the canvas before getting the pixel data
+    # This renders the figure to an internal buffer.
+    fig.canvas.draw()
+    
+    # Get the raw RGBA pixels from the figure's canvas as a NumPy array
+    # (width, height, 4 channels: R, G, B, Alpha)
+    image_from_plot = np.array(fig.canvas.renderer.buffer_rgba())
+    
+    # Append the image array to our list
+    images_in_memory.append(image_from_plot)
+    
+    # Close the figure to free up memory immediately after processing
+    plt.close(fig)
+
+print(f"Finished generating {len(images_in_memory)} frames in memory.")
+
+# --- 4. Create the video from the in-memory images ---
+print(f"Creating video '{output_video_path}'...")
+try:
+    imageio.mimsave(output_video_path, images_in_memory, fps=fps)
+    print("Video created successfully!")
+except Exception as e:
+    print(f"Error creating video: {e}")
+    print("Please ensure FFmpeg is installed and accessible in your system's PATH.")
+    print("You might also need to install imageio with the ffmpeg plugin: 'pip install imageio[ffmpeg]'")
+
+

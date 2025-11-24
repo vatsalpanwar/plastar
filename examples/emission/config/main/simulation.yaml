@@ -1,7 +1,6 @@
-# infostring: 'TEST_emission_dTspot--1100_spot_size-0.2_long-J_band_1120-1125-nm_'
-infostring: 'TEST_rev_emission_dTspot--1100_spot_size-0.2_long-K_band_2440-2445-nm_'
+infostring: 'MAIN_emission_eq-chem-ER_'
 method: 'emission'
-simulations_savedir: '/home/astro/phsprd/code/plastar/examples/emission/results/'
+simulations_savedir: '/home/astro/phsprd/code/plastar/examples/emission/results/main/'
 
 time_step: 300. ## in seconds, including the overheads.
 time_stamps: None # [0.] ### set this to None if you want to use the time_range and time_step to generate the time stamps. Otherwise, set this to a list of time stamps in hours.
@@ -13,15 +12,15 @@ wavelength_overlap_length: 50
 # wavelength_overlap_length: null
 model_resolution_working: 200000
 instrument:
-  name: igrins
-  resolution: 45000
-  wavelength_min: 2435. # 2440. # 2450 # 1960.
-  wavelength_max: 2450. # 2445. # 2460. ##
-  wavelength_min_star: 2433. # 2440. # 2450 # 1960.
-  wavelength_max_star: 2452. # 2445. # 2460. ##
+  name: crires # 2287 to 2330 nm
+  resolution: 100000 
+  wavelength_min: 2260. # 
+  wavelength_max: 2360. # 
+  wavelength_min_star: 2255. # Wider than the planet wavelength range 
+  wavelength_max_star: 2365. # 
 
-  wavelength_common_min: 2440.
-  wavelength_common_max: 2445.
+  wavelength_common_min: 2280.
+  wavelength_common_max: 2330.
 
   # wavelength_min: 1120. # 2440. # 2450 # 1960.
   # wavelength_max: 1125. # 2445. # 2460. ##

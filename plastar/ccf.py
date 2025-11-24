@@ -5,13 +5,12 @@ from functools import partial
 # from splinex import BSpline
 from jax.numpy import interp
 import jax
+import numpy as np
 
 @jit
 def get_R(data: ArrayLike, model: ArrayLike) -> ArrayLike:
     """
     """
-    data = data - jnp.mean(data)
-    model = model - jnp.mean(model)
     # breakpoint()
     R = (1. / len(data)) * jnp.dot(data, model)  ## R in Brogi and Line
     return R
@@ -20,6 +19,8 @@ def get_R(data: ArrayLike, model: ArrayLike) -> ArrayLike:
 def get_C(data: ArrayLike, model: ArrayLike) -> ArrayLike:
     """
     """
+    data = data - jnp.mean(data)
+    model = model - jnp.mean(model)
     R = get_R(data, model)
     C = R / jnp.sqrt(jnp.var(data) * jnp.var(model))  ## C in Brogi and Line
     return C
@@ -28,10 +29,9 @@ def get_C(data: ArrayLike, model: ArrayLike) -> ArrayLike:
 def get_logL(data: ArrayLike, model: ArrayLike) -> ArrayLike:
     """
     """
-
+    data = data - jnp.mean(data)
+    model = model = jnp.mean(model)
     R = get_R(data, model)
-    data = data - jnp.median(data)
-    model = model = jnp.median(model)
     logL = (-len(data)/2) * jnp.log(jnp.var(data) + jnp.var(model) - 2.*R)
     return logL
 
@@ -111,6 +111,67 @@ def compute_logL_map_per_order(datacube: ArrayLike, modelcube_Fp: ArrayLike, mod
 
     return vectorized_grid_func(Kp_grid, Vsys_grid, datacube, modelcube_Fp, modelcube_Fs, model_wavsoln, data_wavsoln, phases, berv)
 
+####### Detrending functions
+def standardise_data(datacube=None):
+    """
+    Standardise datacube before running the PCA on it.
+    :param datacube: array_like
+    Numpy array of timeseries high-resolution spectra, ideally with each exposure normalized
+    already; dimensions should be [time,wavelength].
+
+    :return: Standardised array of datacube, in the same format as the original datacube.
+    """
+    nf, nx = datacube.shape
+    fStd = datacube.copy()
+    for i in range(nx):
+        fStd[:,i] -= np.mean(fStd[:,i])
+        # This is the biased stdev (normalised by nx rather than nx-1)
+        # It needs changing to match CORRELATE.pro
+        fStd[:,i] /= np.std(fStd[:,i]) + 1e-100
+    fStd = np.nan_to_num(fStd,0.) ## This is in case a whole spectral channel was set to zero pre-standardisation, which can lead to some spectral channels being nans. 
+    return fStd
+
+def get_eigenvectors(datacube=None,nc=None):
+    nf, nx = datacube.shape # nf : number of frames, nx : number of wavelength channels
+    xMat = np.ones((nf,nc+1)) # The second dimension is nc+1 because besides the nc eigenvectors
+                              # you want to have the first component to be 1 (required for the multi-linear regression).
+    u, s, vh = np.linalg.svd(datacube, full_matrices=False) # u is the matrix of eigenvectors (shape : (nf, nx) ),
+                                                       # s is a vector of eigenvalues. vh is the Unitary array.
+    xMat[:,1:] = u[:,0:nc] # Take only nc eigenvectors.
+    return xMat
+
+def linear_regression(X=None,Y=None):
+    """
+    Calculate the multi-variate linear regression fit between the matrix of
+    eigenvectors X [nf, nc] and the observed spectral datacube Y [nf, nx].
+    :param X: array_like
+     Matrix of eigenvectors, shape [nf, nc] i.e. [time, number of components]
+
+    :param Y: array_like
+    Datacube, shape [nf, nx] i.e. [time, wavelength]
+
+    :return: Calculated PCA fit to the datacube using the input eigenvector matrix.
+    """
+
+    XT = X.T
+    term1 = np.linalg.inv(jnp.dot(XT,X))
+    term2 = np.dot(term1,XT)
+    beta = np.dot(term2,Y)
+    return np.dot(X,beta)
+
+def get_PCA_detrended_datacube(datacube = None, nc = None):
+    nspec, nwav = datacube.shape[0], datacube.shape[1]
+    
+    datacube_standard = standardise_data(datacube)
+    
+    fStd = datacube_standard.copy()
+    pca_eigenvectors = get_eigenvectors(fStd, nc=nc)
+    
+    datacube_fit = linear_regression(X=pca_eigenvectors, Y=datacube)
+    datacube_detrended = datacube/(datacube_fit+1e-100) - 1.
+    
+    return datacube_detrended
+    
 
 # @jit
 # def compute_logL_map_per_order(datacube: ArrayLike, modelcube_Fp: ArrayLike, modelcube_Fs: ArrayLike,

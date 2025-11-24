@@ -13,6 +13,8 @@ def get_R(data, model):
 def get_C(data, model):
     """
     """
+    data = data - np.mean(data)
+    model = model - np.mean(model)
     R = get_R(data, model)
     C = R / np.sqrt(np.var(data) * np.var(model))  ## C in Brogi and Line
     return C
@@ -48,15 +50,15 @@ def doppler_shift_wavsoln(velocity, wavsoln):
 def compute_RV(Kp: float, Vsys: float, phases, berv):
     return Kp * np.sin(2. * np.pi * phases) + Vsys + berv
 
-
+def doppler_shift_model1D(model_1D, RV_val, model_wavsoln, data_wavsoln):
+    model_spl = interpolate.make_interp_spline(model_wavsoln, model_1D)
+    data_wavsoln_shifted = doppler_shift_wavsoln(-RV_val, data_wavsoln)
+    model_shifted = model_spl(data_wavsoln_shifted)
+    # model_shifted = interp(data_wavsoln_shifted, model_wavsoln, model_1D)
+    return model_shifted
+    
 def doppler_shift_modelcube(modelcube, RV, model_wavsoln, data_wavsoln):
     
-    def doppler_shift_model1D(model_1D, RV_val, model_wavsoln, data_wavsoln):
-        model_spl = interpolate.make_interp_spline(model_wavsoln, model_1D)
-        data_wavsoln_shifted = doppler_shift_wavsoln(-RV_val, data_wavsoln)
-        model_shifted = model_spl(data_wavsoln_shifted)
-        # model_shifted = interp(data_wavsoln_shifted, model_wavsoln, model_1D)
-        return model_shifted
     modelcube_shifted = np.ones( (modelcube.shape[0], len(data_wavsoln)) )
     for i in range(modelcube.shape[0]):
         modelcube_shifted[i,:] = doppler_shift_model1D(modelcube[i,:], RV[i], model_wavsoln, data_wavsoln)
@@ -127,14 +129,14 @@ def logL_per_KpVsys(Kp, Vsys, datacube, modelcube_Fp, modelcube_Fs, model_wavsol
     # ax[3].set_ylabel('Phases')
     
     # plt.suptitle('KpVsys' + str(Kp) + ' ' + str(Vsys))
-    # plt.savefig(f'/home/astro/phsprd/code/plastar/examples/emission/results/TEST_rev_emission_dTspot--1100_spot_size-0.2_long-K_band_2440-2445-nm_15-10-2025T02-36-01/check_shifted_data_model_cubes.png',
+    # plt.savefig('/home/astro/phsprd/code/plastar/examples/emission/results/MAIN_emission_dTspot--1100_spot_size-0.2_long-0_CRIRES_K-band_2280-2330-nm_24-10-2025T14-55-15/',
     #                     dpi = 300)
     # import pdb; pdb.set_trace()
     ######################## 
     
     logL_values = np.zeros((len(phases),))
     for i in range(len(phases)):
-        modelcube_shifted[i,:] = modelcube_shifted[i,:] - np.mean(modelcube_shifted[i,:])
+        # modelcube_shifted[i,:] = modelcube_shifted[i,:] - np.mean(modelcube_shifted[i,:])
         # if Kp > 140. and Kp < 180.:
         #     fig, ax = plt.subplots(2,1,figsize = (12,10))
         #     ax[0].plot(data_wavsoln, datacube[i,:], label = 'data')
@@ -145,7 +147,8 @@ def logL_per_KpVsys(Kp, Vsys, datacube, modelcube_Fp, modelcube_Fs, model_wavsol
         #                 dpi = 300)
         #     plt.close()
         #     import pdb; pdb.set_trace()
-        datacube[i,:] = datacube[i,:] - np.mean(datacube[i,:])
+        # datacube[i,:] = datacube[i,:] - np.mean(datacube[i,:])
+        
         logL_values[i] = get_C(datacube[i,:], modelcube_shifted[i,:])
     return np.sum(logL_values)
 
