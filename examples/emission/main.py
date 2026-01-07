@@ -344,6 +344,8 @@ plt.ylabel('Phases')
 plt.title('datacube - datacube (quiet)')
 plt.savefig(savedir + 'datacube_minus_datacube_quiet.png', format = 'png', dpi = 300)
 
+exit()
+
 # plt.figure()
 # plt.plot(wavsoln, Fp/flux[0], label = 'Fp/Fs')
 # plt.savefig(savedir + 'Fp_by_Fs.png', format = 'png', dpi = 300)

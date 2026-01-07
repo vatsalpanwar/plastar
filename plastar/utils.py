@@ -156,7 +156,7 @@ def get_star_planet_phases(config_file_path = None):
     ## Calculate the time stamps for the simulation, using the start and end time based on the planetary orbital phase.
     time_stamps = np.arange(time_range[0], time_range[1], config_dd_simulation['time_step']/(3600.*24)) ## In days
     print("Number of time stamps: ", len(time_stamps))
-    phases_planet = time_stamps/config_dd_planet['orbper']
+    phases_planet = config_dd_simulation['phase_range'][0] + time_stamps/config_dd_planet['orbper']
 
     ## Star
     ## Get the zeroth time stamp for the star, for the simulation 

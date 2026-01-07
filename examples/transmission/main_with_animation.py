@@ -81,7 +81,7 @@ wavsoln_model_spot, flux_model_spot = utils.get_spot_spectral_models_phoenix(con
 ################################################################
 """Get the phases for the star and the planet, and the time stamps of the observation."""
 ################################################################
-phases_planet, phases_star, time_stamps = utils.get_star_planet_phases(config_file_path = './config/')
+phases_planet, time_stamps = utils.get_star_planet_phases(config_file_path = './config/')
 
 ################################################################
 ################################################################
@@ -153,10 +153,10 @@ plt.savefig(savedir + 'doppler_in_minus_out.png', dpi = 300, format = 'png')
 output_video_path = savedir + 'output_spectrum.mp4'
 fps = 1 # Frames per second for the output video
 dpi = 300
-num_frames = len(phases_star)
+num_frames = len(phases_planet)
 
 images_in_memory = []
-for ip, phase_star in enumerate(phases_star):
+for ip, phase_star in enumerate(star.phase(time_stamps)):
     print(phase_star)
     fig, axes = plt.subplots(nrows = 1, ncols = 2, figsize=(25, 15))
     
@@ -209,7 +209,8 @@ for ip, phase_star in enumerate(phases_star):
     # ax.set_ylabel('(flux[ip,:]/light_curve[ip]) - flux[0,:]')
     # ax.set_ylabel('flux[ip,:] - flux[0,:]')
     ax.set_ylabel('In Transit / Out of Transit')
-    ax.set_ylim(min(phases_planet), max(phases_planet))
+    # ax.set_ylim(min(phases_planet), max(phases_planet))
+    ax.set_ylim(-0.01, 0.01)
     # plt.savefig(savedir + 'output_spectrum_phase_'+str(ip)+'.png', dpi = 300, format = 'png')
     
     # Important: Draw the canvas before getting the pixel data

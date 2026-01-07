@@ -23,30 +23,37 @@ plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 
 savedir = '/home/astro/phsprd/stellar_activity_retrievals/data/emission/'
 ### Load the simulated data 
-results_root = '/home/astro/phsprd/code/plastar/examples/emission/results/main/'
+results_root = '/home/astro/phsprd/code/plastar/examples/emission/results/'
 
-# dTspot = '-1100.0'
 # spot_size = '0.2'
-# long0 = '0.0'
-# vsini = '3.5'
-# instrument = 'crires'
-# waverange = ['2280.0', '2330.0']
+# long = '45'
+# vsini = '20'
+# date = '06-11-2025T01-43-40'
 
-dTspot = '-1100.0'
+# spot_size = '0.2'
+# long = '0'
+# vsini = '3'
+# date = '06-11-2025T14-21-45'
+
 spot_size = '0.2'
-long0 = '0.0'
-vsini = '20.0'
-instrument = 'crires'
-waverange = ['2280.0', '2330.0']
+long = '0'
+vsini = '10'
+date = '13-11-2025T15-23-41'
 
-SNR = 500
-addinfo = '_data-quiet' + '_only_tell_modulated_noise_SNR-' + str(SNR)
+# spot_size = '0.2'
+# long = '0'
+# vsini = '20'
+# date = '06-11-2025T14-25-34'
+
+# spot_size = '0.2'
+# long = '45'
+# vsini = '3'
+# date = '06-11-2025T01-47-33'
+
+SNR = 1000
+addinfo = '_only_tell_modulated_noise_SNR-' + str(SNR)
 # addinfo = '_tell_with_tell_modulated_noise_SNR-' + str(SNR)
-# dir_name = 'MAIN_emission_eq-chem-ER_' + f'dTspot-{dTspot}_spot_size-{spot_size}_long-{long0}_vsini-{vsini}_{instrument}_{waverange[0]}-{waverange[1]}-nm'
-
-dir_name = 'MAIN_emission_eq-chem-ER_' + f'dTspot-{dTspot}_spot_size-{spot_size}_long-{long0}_vsini-{vsini}_{instrument}_{waverange[0]}-{waverange[1]}-nm'
-
-print(dir_name)
+dir_name = f'MAIN_emission_eq-chem-ER_dTspot--1100_spot_size-{spot_size}_long-{long}_vsini-{vsini}_CRIRES_K-band_2280-2330-nm_{date}'
 results_path = results_root + dir_name + '/'
 
 savedir = savedir + dir_name + '/'
@@ -59,22 +66,8 @@ spdd = np.load(results_path + 'spdd.npy', allow_pickle = True).item()
 data_wavsoln = spdd['wavsoln']
 phases = spdd['phases']
 berv = spdd['berv']
-
-###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ###### 
-###### ###### ###### DEFINE THE DATACUBE ###### ###### ###### ###### ###### 
-###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ###### 
-
-###### Do you want the data to be active or quiet? 
 # datacube = spdd['datacube']
-datacube = spdd['datacube_quiet']
-### Should be doing this a separate test (on 16 Dec 2025): 
-# datacube_test = spdd['F_star'] + spdd['F_planet']
-# import pdb; pdb.set_trace()
-###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ###### 
-###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ###### 
-###### ###### ###### ###### ###### ###### ###### ###### ###### ###### ###### 
-
-
+datacube = spdd['F_star'] + spdd['F_planet']
 ### Add noise to the datacube and convolve to instrumental resolution 
 
 
@@ -173,10 +166,8 @@ np.save(savedir + 'star_planet_model.npy', star_planet_model)
 fig, ax = plt.subplots(2,1,figsize = (10,18))
 ax[0].plot(star_planet_model['wavsoln'], star_planet_model['F_star_active_orig'][10,:], label = 'Active')
 ax[0].plot(star_planet_model['wavsoln'], star_planet_model['F_star_quiet_orig'][10,:], label = 'Quiet')
-ax[0].legend()
-ax[1].plot(star_planet_model['wavsoln'], star_planet_model['F_star_active_orig'][10,:] / star_planet_model['F_star_quiet_orig'][10,:],
-           label = 'Fs Active/Quiet')
-ax[1].legend()
+ax[1].plot(star_planet_model['wavsoln'], star_planet_model['F_star_active_orig'][10,:] / star_planet_model['F_star_quiet_orig'][10,:])
+
 ax[0].set_xlabel('Wavelength [nm]')
 ax[0].set_ylabel('Flux')
 ax[1].set_ylabel('Flux')
@@ -195,18 +186,17 @@ berv = jnp.array(spdd_save['bary_RV'])
 modelcube_Fp = jnp.array(spdd['F_planet_orig'][np.newaxis,:] * np.ones((len(phases), len(model_wavsoln) )) )
 modelcube_Fs = jnp.array(spdd['F_star_orig'])
 modelcube_Fs_quiet = jnp.array(spdd['F_star_quiet_orig'])
-
 ### Do telluric and stellar correction with one PCA component
-N_PCA = 1
-datacube = ccf.get_PCA_detrended_datacube(datacube = datacube, nc = N_PCA)
+datacube = ccf.get_PCA_detrended_datacube(datacube = datacube, nc = 1)
+
 plt.figure(figsize = (18,10))
 plt.pcolormesh(spdd_save['wavsoln'], spdd_save['phases'], 
                datacube) ## Only one order 
 plt.colorbar()
 plt.xlabel('Wavelength [nm]')
 plt.ylabel('Phases')
-plt.title(f'Datacube detrended with N_PCA = {str(N_PCA)}')
-plt.savefig(savedir + 'datacube_detrended'+ addinfo + '_N_PCA-' + str(N_PCA) +'.png', format = 'png', dpi = 300)
+plt.title('Datacube detrended with N_PCA = 1')
+plt.savefig(savedir + 'datacube_detrended'+addinfo+'.png', format = 'png', dpi = 300)
 
 ccf_active_data_active_model = ccf.compute_logL_map_per_order(datacube, modelcube_Fp, modelcube_Fs,
                                                               Kp_range, 
@@ -230,17 +220,7 @@ plt.colorbar()
 plt.xlabel('Vsys')
 plt.ylabel('Kp')
 plt.title('Data: Fs_active * (1 + Fp / Fs_active) \n Model: Fp / Fs_active')
-plt.savefig(savedir + 'KpVsys_active_data_active_model'+addinfo+ '_N_PCA-' + str(N_PCA) +'.png', format = 'png', dpi = 300)
-
-plt.figure(figsize = (15,15))
-plt.pcolormesh(Vsys_range, Kp_range, ccf_active_data_quiet_model)
-plt.axhline(y = 154, color = 'w')
-plt.axvline(x=-15., color = 'w')
-plt.colorbar()
-plt.xlabel('Vsys')
-plt.ylabel('Kp')
-plt.title('Data: Fs_active * (1 + Fp / Fs_active) \n Model: Fp / Fs_quiet')
-plt.savefig(savedir + 'KpVsys_active_data_quiet_model'+addinfo+ '_N_PCA-' + str(N_PCA) +'.png', format = 'png', dpi = 300)
+plt.savefig(savedir + 'KpVsys_active_data_active_model'+addinfo+'.png', format = 'png', dpi = 300)
 
 plt.figure(figsize = (15,15))
 plt.pcolormesh(Vsys_range, Kp_range, ccf_active_data_active_model - ccf_active_data_quiet_model)
@@ -250,4 +230,4 @@ plt.colorbar()
 plt.xlabel('Vsys')
 plt.ylabel('Kp')
 plt.title('Active:Data, Active:Model \n - Active:Data, Quiet:Model')
-plt.savefig(savedir + 'Delta_KpVsys_active_active_minus_active_quiet_'+addinfo+ '_N_PCA-' + str(N_PCA) +'.png', format = 'png', dpi = 300)
+plt.savefig(savedir + 'Delta_KpVsys_active_active_minus_active_quiet_'+addinfo+'.png', format = 'png', dpi = 300)

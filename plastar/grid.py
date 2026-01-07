@@ -234,8 +234,7 @@ class StellarGrid:
             integrated_spectrum = np.zeros((len(time), chunked_stellar_spectrum.shape[0], chunked_stellar_spectrum.shape[1]))
             if self.include_planet:
                 x, y, z = self.planet_coords(time)
-                merged_integrated_spectrum = np.zeros((len(time), merged_length))
-                
+            merged_integrated_spectrum = np.zeros((len(time), merged_length))    
             for ichunk in tqdm(range(chunked_stellar_spectrum.shape[0])):
                 star = self.set_spectral_values(stellar_spectrum = chunked_stellar_spectrum[ichunk,:], 
                                                 spot_spectra = chunked_spot_spectra[:,ichunk,:], 
@@ -249,11 +248,14 @@ class StellarGrid:
             ## Merge the chunks back, accounting for the overlap
             merged_wavelength_solution = utils.merge_chunks_back(chunked_wavelength_solution, wavelength_chunk_length, wavelength_overlap_length)
             
-            if self.include_planet:
-                for itime in range(len(time)):
-                    merged_integrated_spectrum[itime,:] = utils.merge_chunks_back(integrated_spectrum[itime,:,:], wavelength_chunk_length, wavelength_overlap_length)
-            else:
-                merged_integrated_spectrum = utils.merge_chunks_back(integrated_spectrum, wavelength_chunk_length, wavelength_overlap_length)
+            for itime in range(len(time)):
+                merged_integrated_spectrum[itime,:] = utils.merge_chunks_back(integrated_spectrum[itime,:,:], wavelength_chunk_length, wavelength_overlap_length)
+            
+            # if self.include_planet:
+            #     for itime in range(len(time)):
+            #         merged_integrated_spectrum[itime,:] = utils.merge_chunks_back(integrated_spectrum[itime,:,:], wavelength_chunk_length, wavelength_overlap_length)
+            # else:
+            #     merged_integrated_spectrum = utils.merge_chunks_back(integrated_spectrum, wavelength_chunk_length, wavelength_overlap_length)
 
             return star, merged_integrated_spectrum, merged_wavelength_solution
     

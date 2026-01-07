@@ -6,19 +6,20 @@ star:
   Rs: 0.76 ## In solar radius 
   nside: 100
   inc: 90.
-  v_eq: 20. # 3.5
+  v_eq: 3.5
   alpha: 0.
   u1: 0.5507
   u2: 0.1361
   LD: 'quadratic_phoenix' ## this will override u1 and u2 values. Set to quadratic_self if you want to use self defined LD coefficients.
-  Vsys: -15. ## Actual value for HD189 is -2.204 ## in km/s
+  Vsys: -2.204 ## in km/s
   
 spots_and_faculae:
   parametrization: 'explicit'
-  delta_teff: [-1100.]
+  # delta_teff: [-1100.]
+  delta_teff: [0.]
   lat: [0.] ## In degrees.
-  lon: [0.] ## In degrees.
-  rad: [0.2] ## Radius of the spot, in degrees or stellar radius.
+  lon: [45.] ## In degrees.
+  rad: [0.1] ## Radius of the spot, in degrees or stellar radius.
   radunit: 'stellar_radius' ##
   sharpness: [1000]
   log_g: [4.5]

@@ -142,26 +142,26 @@ star, F_star_, wavsoln_star = star_grid.get_spectral_time_series(time=time_stamp
 
 print('Stellar flux calculation done!')
 
-# N, n_n = core._N_or_Y_to_N_n(star.y[0])
-# spot_cen_pix = hp.ang2pix(N, np.pi/2, 0)
+N, n_n = core._N_or_Y_to_N_n(star.y[0])
+spot_cen_pix = hp.ang2pix(N, np.pi/2, 0)
 
-# plt.figure()
-# # plt.plot(wavsoln_star, F_star_[0,:,spot_cen_pix], label = 'active')
-# # plt.plot(wavsoln_star, F_star_quiet_[0,:,spot_cen_pix], label = 'quiet')
+plt.figure()
 # plt.plot(wavsoln_star, F_star_[0,:,spot_cen_pix], label = 'active')
 # plt.plot(wavsoln_star, F_star_quiet_[0,:,spot_cen_pix], label = 'quiet')
-# plt.legend()
-# plt.savefig(savedir + 'design_matrix_test.png', dpi = 300, format = 'png')
+plt.plot(wavsoln_star, F_star_[0,:,spot_cen_pix], label = 'active')
+plt.plot(wavsoln_star, F_star_quiet_[0,:,spot_cen_pix], label = 'quiet')
+plt.legend()
+plt.savefig(savedir + 'design_matrix_test.png', dpi = 300, format = 'png')
 
-# plt.figure()
-# plt.plot(F_star_[0,0,97450:97622], label = 'active')
-# plt.plot(F_star_quiet_[0,0,97450:97622], label = 'quiet')
-# plt.plot(F_star_[2,0,97450:97622], linestyle = 'dashed', label = 'active')
-# plt.plot(F_star_quiet_[2,0,97450:97622], linestyle = 'dashed', label = 'quiet')
-# plt.legend()
-# plt.savefig(savedir + 'projected_area_at_equator.png', dpi = 300, format = 'png')
+plt.figure()
+plt.plot(F_star_[0,0,spot_cen_pix-50:spot_cen_pix+50], label = 'active')
+plt.plot(F_star_quiet_[0,0,spot_cen_pix-50:spot_cen_pix+50], label = 'quiet')
+plt.plot(F_star_[2,0,spot_cen_pix-50:spot_cen_pix+50], linestyle = 'dashed', label = 'active')
+plt.plot(F_star_quiet_[2,0,spot_cen_pix-50:spot_cen_pix+50], linestyle = 'dashed', label = 'quiet')
+plt.legend()
+plt.savefig(savedir + 'projected_area_at_equator.png', dpi = 300, format = 'png')
 
-# import pdb; pdb.set_trace()
+import pdb; pdb.set_trace()
 ################################################################
 #### Interpolate F_star to wavsoln_planet
 F_star = np.zeros((len(phases_planet), len(wavsoln)))
