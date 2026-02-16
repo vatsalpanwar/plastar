@@ -49,7 +49,7 @@ d1 = now.strftime("%d-%m-%YT%H-%M-%S")
 
 # config_file_path = args['config_file_path']
 
-config_file_path = '/home/astro/phsprd/code/plastar/examples/emission/config/main/'
+config_file_path = '../config/'
 
 with open(config_file_path+'star.yaml') as f:
     config_dd_star = yaml.load(f,Loader=yaml.FullLoader)
