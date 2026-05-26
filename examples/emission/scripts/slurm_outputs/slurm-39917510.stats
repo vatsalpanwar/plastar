@@ -1,0 +1,28 @@
++--------------------------------------------------------------------------+
+| Job on the BlueBEAR cluster:
+| Starting at Tue Mar 17 23:15:06 2026 for panwarv(942293)
+| Identity jobid 39917510 jobname run_create_spdatacubes.sh
+| Running against project piettaaa-exo-mapping and in partition emerald-shared
+| Requested cpu=10,mem=150G,node=1,billing=10 - 01:00:00 walltime
+| Allocated cpu=10,mem=150G,node=1,billing=10
+| Assigned to nodes bear-pg0201u36b
+| Command /rds/projects/p/piettaaa-exo-mapping/code/plastar/examples/emission/scripts/run_create_spdatacubes.sh
+| WorkDir /rds/projects/p/piettaaa-exo-mapping/code/plastar/examples/emission/scripts
++--------------------------------------------------------------------------+
++--------------------------------------------------------------------------+
+| Finished at Tue Mar 17 23:16:12 2026 for panwarv(942293) on the BlueBEAR Cluster
+| Required (00:27.422 cputime, 1116197K memory used) - 00:01:08 walltime
+| JobState COMPLETING - Reason None
+| Exitcode 0:0
++--------------------------------------------------------------------------+
+Job efficiency stats from seff for Job ID: 39917510
+Cluster: paddington
+User/Group: panwarv/users
+State: COMPLETED (exit code 0)
+Nodes: 1
+Cores per node: 10
+CPU Utilized: 00:00:27
+CPU Efficiency: 3.97% of 00:11:20 core-walltime
+Job Wall-clock time: 00:01:08
+Memory Utilized: 1.06 GB
+Memory Efficiency: 0.71% of 150.00 GB

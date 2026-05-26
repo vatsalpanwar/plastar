@@ -131,7 +131,7 @@ star_quiet, F_star_quiet_, wavsoln_star = star_grid.get_spectral_time_series(tim
                                                         wavelength_overlap_length = config_dd_simulation['wavelength_overlap_length']
                                                         )
 
-star, F_star_, wavsoln_star = star_grid.get_spectral_time_series(time=time_stamps, 
+star_active, F_star_active_, wavsoln_star = star_grid.get_spectral_time_series(time=time_stamps, 
                                                             stellar_spectrum = flux_model_star, 
                                                         spot_spectra = flux_model_spot, 
                                                         include_spots_and_faculae = True,
@@ -163,15 +163,15 @@ print('Stellar flux calculation done!')
 # import pdb; pdb.set_trace()
 ################################################################
 #### Interpolate F_star to wavsoln_planet
-F_star = np.zeros((len(phases_planet), len(wavsoln)))
+F_star_active = np.zeros((len(phases_planet), len(wavsoln)))
 F_star_quiet = np.zeros((len(phases_planet), len(wavsoln)))
 
 for ip in range(len(phases_planet)):
-    model_spl_star = interpolate.make_interp_spline(wavsoln_star, 
-                                F_star_[ip,:], bc_type='natural')
+    model_spl_star_active = interpolate.make_interp_spline(wavsoln_star, 
+                                F_star_active_[ip,:], bc_type='natural')
     model_spl_star_quiet = interpolate.make_interp_spline(wavsoln_star, 
                                 F_star_quiet_[ip,:], bc_type='natural')
-    F_star[ip,:] = model_spl_star(wavsoln)
+    F_star_active[ip,:] = model_spl_star_active(wavsoln)
     F_star_quiet[ip,:] = model_spl_star_quiet(wavsoln)
 
 ################################################################
@@ -191,158 +191,152 @@ RV_array = ccf.compute_RV(Kp = planet_dict['Kp'],
 wav_com_min, wav_com_max = simulation_dict["instrument"]["wavelength_common_min"], simulation_dict["instrument"]["wavelength_common_max"]
 wav_com_min_ind = np.argmin(abs(wavsoln - wav_com_min)) 
 wav_com_max_ind = np.argmin(abs(wavsoln - wav_com_max))
+### Save the orig wavsoln and slice it to common wavelength range to avoid extrapolations
+wavsoln_orig = wavsoln ## This will be saved for use with retrievals when using F_star
+wavsoln_sliced = wavsoln[wav_com_min_ind:wav_com_max_ind] ## This will be used for creating the simulated dataset
 
 ## Doppler shift and stack F_planet 
-F_planet_shifted = np.ones( (len(phases_planet), len(wavsoln[wav_com_min_ind:wav_com_max_ind]) ) )
+F_planet_shifted = np.ones( (len(phases_planet), len(wavsoln_sliced) ) )
 F_planet_spl = interpolate.make_interp_spline(wavsoln, F_planet)
 for ip in range(len(phases_planet)):
     # wavsoln_shifted = ccf.doppler_shift_wavsoln(RV_array[ip], wavsoln[wav_com_min_ind:wav_com_max_ind])
-    wavsoln_shifted = ccf.doppler_shift_wavsoln(-RV_array[ip], wavsoln[wav_com_min_ind:wav_com_max_ind]) ## When injecting as well, doppler shift the wavelength solution by -RV to shift the model by +RV effectively. 
+    wavsoln_shifted = ccf.doppler_shift_wavsoln(-RV_array[ip], wavsoln_sliced) ## When injecting as well, doppler shift the wavelength solution by -RV to shift the model by +RV effectively. 
     F_planet_shifted[ip,:] = F_planet_spl(wavsoln_shifted)
 
-## Doppler shift F_star by Vsys and berv 
-F_star_shifted = np.ones((len(phases_planet), len(wavsoln[wav_com_min_ind:wav_com_max_ind]) ))
+## Doppler shift F_star_active by Vsys and berv 
+F_star_active_shifted = np.ones((len(phases_planet), len(wavsoln_sliced) ))
 for ip in range(len(phases_planet)):
-    F_star_spl = interpolate.make_interp_spline(wavsoln, F_star[ip,:])
+    F_star_active_spl = interpolate.make_interp_spline(wavsoln, F_star_active[ip,:])
     RV_star = star_dict['Vsys'] + berv[ip]
     # wavsoln_shifted = ccf.doppler_shift_wavsoln(RV_star, wavsoln[wav_com_min_ind:wav_com_max_ind])
-    wavsoln_shifted = ccf.doppler_shift_wavsoln(-RV_star, wavsoln[wav_com_min_ind:wav_com_max_ind])
-
-    F_star_shifted[ip,:] = F_star_spl(wavsoln_shifted)
+    wavsoln_shifted = ccf.doppler_shift_wavsoln(-RV_star, wavsoln_sliced)
+    F_star_active_shifted[ip,:] = F_star_active_spl(wavsoln_shifted)
     
-F_star_quiet_shifted = np.ones((len(phases_planet), len(wavsoln[wav_com_min_ind:wav_com_max_ind]) ))
+F_star_quiet_shifted = np.ones((len(phases_planet), len(wavsoln_sliced) ))
 for ip in range(len(phases_planet)):
     F_star_quiet_spl = interpolate.make_interp_spline(wavsoln, F_star_quiet[ip,:])
     RV_star = star_dict['Vsys'] + berv[ip]
-    wavsoln_shifted = ccf.doppler_shift_wavsoln(RV_star, wavsoln[wav_com_min_ind:wav_com_max_ind])
+    # wavsoln_shifted = ccf.doppler_shift_wavsoln(RV_star, wavsoln[wav_com_min_ind:wav_com_max_ind])
+    wavsoln_shifted = ccf.doppler_shift_wavsoln(-RV_star, wavsoln_sliced) ### Changed on 24th Feb 2026!!!
     F_star_quiet_shifted[ip,:] = F_star_quiet_spl(wavsoln_shifted)
 
-### Slice it to common wavelength range to avoid extrapolations
-wavsoln_orig = wavsoln
-wavsoln = wavsoln[wav_com_min_ind:wav_com_max_ind]
-# F_planet = F_planet[wav_com_min_ind:wav_com_max_ind]
-# F_star = F_star[:,wav_com_min_ind:wav_com_max_ind]
-# F_star_quiet = F_star[:,wav_com_min_ind:wav_com_max_ind]
-# F_planet_shifted = F_planet_shifted[:,wav_com_min_ind:wav_com_max_ind]
-# F_star_shifted = F_star_shifted[:,wav_com_min_ind:wav_com_max_ind]
-# F_star_quiet_shifted = F_star_quiet_shifted[:,wav_com_min_ind:wav_com_max_ind]
 
-### Plot and check 
+##### Save the outputs
+spdd = {}
+
+spdd['F_star_active_orig'] = F_star_active
+spdd['F_star_quiet_orig'] = F_star_quiet
+spdd['F_planet_orig'] = F_planet
+
+spdd['F_star_active_shifted'] = F_star_active_shifted
+spdd['F_star_quiet_shifted'] = F_star_quiet_shifted
+spdd['F_planet_shifted'] = F_planet_shifted
+
+spdd['berv'] = berv
+spdd['phases'] = phases_planet
+spdd['wav_com_min_ind'] = wav_com_min_ind
+spdd['wav_com_max_ind'] = wav_com_max_ind
+spdd['wavsoln_orig'] = wavsoln_orig
+spdd['wavsoln_sliced'] = wavsoln_sliced
+np.save(savedir + 'spdd.npy', spdd)
+
+###### Plot and check 
+## Plot only Fp matrix Doppler shifted 
 plt.figure(figsize = (18,10))
-plt.pcolormesh(wavsoln, phases_planet, F_planet_shifted)
+plt.pcolormesh(wavsoln_sliced, phases_planet, F_planet_shifted)
 plt.colorbar()
 plt.xlabel('Wavelength [nm]')
 plt.ylabel('Phases')
 plt.title('Fp')
 plt.savefig(savedir + 'Fp_doppler_shifted.png', format = 'png', dpi = 300)
 
+## Plot only Fs active matrix Doppler shifted 
 plt.figure(figsize = (18,10))
-plt.pcolormesh(wavsoln, phases_planet, F_star_shifted)
+plt.pcolormesh(wavsoln_sliced, phases_planet, F_star_active_shifted)
 plt.colorbar()
 plt.xlabel('Wavelength [nm]')
 plt.ylabel('Phases')
 plt.title('Fs')
-plt.savefig(savedir + 'Fs_doppler_shifted.png', format = 'png', dpi = 300)
+plt.savefig(savedir + 'Fs_active_doppler_shifted.png', format = 'png', dpi = 300)
 
+## Plot first and last Fs active exposures (not Doppler shifted by Vsys)
 plt.figure(figsize = (18,10))
-plt.plot(wavsoln_orig, F_star[0,:], label = 'First exposure, Active', color = 'k')
-plt.plot(wavsoln_orig, F_star[-1,:], label = 'Last exposure, Active', color = 'r')
+plt.plot(wavsoln_orig, F_star_active[0,:], label = 'First exposure, Active', color = 'k')
+plt.plot(wavsoln_orig, F_star_active[-1,:], label = 'Last exposure, Active', color = 'r')
 plt.plot(wavsoln_orig, F_star_quiet[0,:], label = 'First exposure, Quiet', color = 'k', linestyle = 'dashed')
 plt.plot(wavsoln_orig, F_star_quiet[-1,:], label = 'Last exposure, Quiet', color = 'r', linestyle = 'dashed')
 plt.xlabel('Wavelength [nm]')
 plt.ylabel('Fs')
 plt.title('Fs')
 plt.legend()
-plt.savefig(savedir + 'Fs_1D_orig_shifted.png', format = 'png', dpi = 300)
+plt.savefig(savedir + 'Fs_1D_orig_active-vs-quiet_1D_orig.png', format = 'png', dpi = 300)
 
+## Plot Fs_active/Fs_quiet exposures (not Doppler shifted by Vsys)
 plt.figure(figsize = (18,10))
-plt.plot(wavsoln_orig, F_star[0,:]/F_star_quiet[0,:], label = 'First exposure, Active/Quiet', color = 'k')
-plt.plot(wavsoln_orig, F_star[-1,:]/F_star_quiet[-1,:], label = 'Last exposure, Active/Quiet', color = 'r')
+plt.plot(wavsoln_orig, F_star_active[0,:]/F_star_quiet[0,:], label = 'First exposure, Active/Quiet', color = 'k')
+plt.plot(wavsoln_orig, F_star_active[-1,:]/F_star_quiet[-1,:], label = 'Last exposure, Active/Quiet', color = 'r')
 plt.xlabel('Wavelength [nm]')
 plt.ylabel('Fs')
 plt.title('Fs')
 plt.legend()
-plt.savefig(savedir + 'Fs_1D_orig_Active_by_Quiet_shifted.png', format = 'png', dpi = 300)
+plt.savefig(savedir + 'Fs_1D_orig_active_by_quiet.png', format = 'png', dpi = 300)
 
+## Plot Fp/Fs_active 
 plt.figure(figsize = (18,10))
-Fp_by_Fs = F_planet_shifted/F_star_shifted
-plt.pcolormesh(wavsoln, phases_planet, Fp_by_Fs)
+Fp_by_Fs_active_shifted = F_planet_shifted/F_star_active_shifted
+plt.pcolormesh(wavsoln_sliced, phases_planet, Fp_by_Fs_active_shifted)
 plt.colorbar()
 plt.xlabel('Wavelength [nm]')
 plt.ylabel('Phases')
 plt.title('Fp/Fs')
-plt.savefig(savedir + 'Fp_by_Fs_doppler_shifted.png', format = 'png', dpi = 300)
+plt.savefig(savedir + 'Fp_by_Fs_active_doppler_shifted.png', format = 'png', dpi = 300)
 
+## Plot Fp/Fs_quiet 
 plt.figure(figsize = (18,10))
-Fp_by_Fs_quiet = F_planet_shifted/F_star_quiet_shifted
-plt.pcolormesh(wavsoln, phases_planet, Fp_by_Fs_quiet )
+Fp_by_Fs_quiet_shifted = F_planet_shifted/F_star_quiet_shifted
+plt.pcolormesh(wavsoln_sliced, phases_planet, Fp_by_Fs_quiet_shifted )
 plt.colorbar()
 plt.xlabel('Wavelength [nm]')
 plt.ylabel('Phases')
 plt.title('Fp/Fs quiet')
 plt.savefig(savedir + 'Fp_by_Fs_quiet_doppler_shifted.png', format = 'png', dpi = 300)
 
+## Plot Fp/Fs_active - Fp/Fs_quiet exposures 
 plt.figure(figsize = (18,10))
-plt.pcolormesh(wavsoln, phases_planet, Fp_by_Fs - Fp_by_Fs_quiet)
+plt.pcolormesh(wavsoln_sliced, phases_planet, Fp_by_Fs_active_shifted - Fp_by_Fs_quiet_shifted)
 plt.colorbar()
 plt.xlabel('Wavelength [nm]')
 plt.ylabel('Phases')
-plt.title('Fp/Fs - Fp/Fs (quiet)')
-plt.savefig(savedir + 'Fp_by_Fs_minus_Fp_by_Fs_quiet_doppler_shifted.png', format = 'png', dpi = 300)
+plt.title('Fp/Fs (active) - Fp/Fs (quiet)')
+plt.savefig(savedir + 'Fp_by_Fs_active_minus_Fp_by_Fs_quiet_doppler_shifted.png', format = 'png', dpi = 300)
 
-##### Plot the middle 1D Fp/Fs 
-plt.figure(figsize = (18,10))
-plt.plot(wavsoln, Fp_by_Fs[int(len(Fp_by_Fs)/2),:], label = 'active' )
-plt.plot(wavsoln, Fp_by_Fs_quiet[int(len(Fp_by_Fs_quiet)/2),:], label = 'quiet' )
-plt.savefig(savedir + 'Fp_by_Fs_1D_comparison.png', format = 'png', dpi = 300)
 
-##### Save the outputs
-spdd = {}
-spdd['datacube'] = F_star_shifted*(1. + Fp_by_Fs)
-spdd['datacube_quiet'] = F_star_quiet_shifted*(1. + Fp_by_Fs_quiet)
 
-spdd['F_star_orig'] = F_star
-spdd['F_star_quiet_orig'] = F_star_quiet
-spdd['F_planet_orig'] = F_planet
-
-spdd['F_star'] = F_star_shifted
-spdd['F_star_quiet'] = F_star_quiet_shifted
-spdd['F_planet'] = F_planet_shifted
-
-spdd['berv'] = berv
-spdd['phases'] = phases_planet
-spdd['wavsoln_orig'] = wavsoln_orig
-spdd['wav_com_min_ind'] = wav_com_min_ind
-spdd['wav_com_max_ind'] = wav_com_max_ind
-spdd['wavsoln'] = wavsoln
-spdd['Fp_by_Fs'] = Fp_by_Fs
-spdd['Fp_by_Fs_quiet'] = Fp_by_Fs_quiet
-np.save(savedir + 'spdd.npy', spdd)
 
 ##### Plot the datacubes as well
-plt.figure(figsize = (18,10))
-plt.pcolormesh(wavsoln, phases_planet, spdd['datacube'])
-plt.colorbar()
-plt.xlabel('Wavelength [nm]')
-plt.ylabel('Phases')
-plt.title('datacube')
-plt.savefig(savedir + 'datacube.png', format = 'png', dpi = 300)
+# plt.figure(figsize = (18,10))
+# plt.pcolormesh(wavsoln, phases_planet, spdd['datacube'])
+# plt.colorbar()
+# plt.xlabel('Wavelength [nm]')
+# plt.ylabel('Phases')
+# plt.title('datacube')
+# plt.savefig(savedir + 'datacube_active.png', format = 'png', dpi = 300)
 
-plt.figure(figsize = (18,10))
-plt.pcolormesh(wavsoln, phases_planet, spdd['datacube_quiet'])
-plt.colorbar()
-plt.xlabel('Wavelength [nm]')
-plt.ylabel('Phases')
-plt.title('datacube (quiet)')
-plt.savefig(savedir + 'datacube_quiet.png', format = 'png', dpi = 300)
+# plt.figure(figsize = (18,10))
+# plt.pcolormesh(wavsoln, phases_planet, spdd['datacube_quiet'])
+# plt.colorbar()
+# plt.xlabel('Wavelength [nm]')
+# plt.ylabel('Phases')
+# plt.title('datacube (quiet)')
+# plt.savefig(savedir + 'datacube_quiet.png', format = 'png', dpi = 300)
 
-plt.figure(figsize = (18,10))
-plt.pcolormesh(wavsoln, phases_planet, spdd['datacube'] - spdd['datacube_quiet'])
-plt.colorbar()
-plt.xlabel('Wavelength [nm]')
-plt.ylabel('Phases')
-plt.title('datacube - datacube (quiet)')
-plt.savefig(savedir + 'datacube_minus_datacube_quiet.png', format = 'png', dpi = 300)
+# plt.figure(figsize = (18,10))
+# plt.pcolormesh(wavsoln, phases_planet, spdd['datacube'] - spdd['datacube_quiet'])
+# plt.colorbar()
+# plt.xlabel('Wavelength [nm]')
+# plt.ylabel('Phases')
+# plt.title('datacube - datacube (quiet)')
+# plt.savefig(savedir + 'datacube_minus_datacube_quiet.png', format = 'png', dpi = 300)
 
 exit()
 

@@ -10,11 +10,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import splev, splrep
 import copy
-from genesis import genesis
+from cocofax import genesis
 import pyfastchem
 from . import utils as ut
 
-FAST_CHEM_DIR = '/home/astro/phsprd/code/plastar/input_data/fastchem/'
+FAST_CHEM_DIR = '/rds/projects/p/piettaaa-exo-mapping/code/plastar/input_data/fastchem/'
 
 class PlanetAtmosphere():
     

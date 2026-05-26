@@ -297,12 +297,15 @@ def get_gaussian_kernel(size = None, sigma = None):
 
 def convolve_spectra_to_instrument_resolution(instrument_resolution = None, model_resolution = None, model_spec_orig = None):
     
-    delwav_by_wav = 1/instrument_resolution # for the instrument (value is 1/100000 for crires and 1/45000 for igrins) 
-    delwav_by_wav_model = 1./model_resolution   ### np.diff(model_wav)/model_wav[1:]
-    
-    FWHM = np.mean(delwav_by_wav/delwav_by_wav_model)
-    sig = FWHM / (2. * np.sqrt(2. * np.log(2.) ) )
-    gauss_kernel = get_gaussian_kernel(size = sig*10, sigma = sig)
-    # model_spec = np.convolve(model_spec_orig)           
-    model_spec = np.convolve(model_spec_orig, gauss_kernel, mode = 'same')
-    return model_spec
+    if instrument_resolution is not None:
+        delwav_by_wav = 1/instrument_resolution # for the instrument (value is 1/100000 for crires and 1/45000 for igrins) 
+        delwav_by_wav_model = 1./model_resolution   ### np.diff(model_wav)/model_wav[1:]
+        
+        FWHM = np.mean(delwav_by_wav/delwav_by_wav_model)
+        sig = FWHM / (2. * np.sqrt(2. * np.log(2.) ) )
+        gauss_kernel = get_gaussian_kernel(size = sig*10, sigma = sig)
+        # model_spec = np.convolve(model_spec_orig)           
+        model_spec = np.convolve(model_spec_orig, gauss_kernel, mode = 'same')
+        return model_spec
+    else:
+        return model_spec_orig

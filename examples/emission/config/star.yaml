@@ -6,7 +6,7 @@ star:
   Rs: 0.76 ## In solar radius 
   nside: 100
   inc: 90.
-  v_eq: 20. # 3.5
+  v_eq: 20.0
   alpha: 0.
   u1: 0.5507
   u2: 0.1361
