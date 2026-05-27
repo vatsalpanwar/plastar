@@ -174,7 +174,7 @@ def get_PCA_detrended_datacube(datacube = None, nc = None):
 
 def get_perfect_detrended_datacube(datacube = None, correction_cube = None):
 
-    datacube_detrended = datacube/(correction_cube) - 1.
+    datacube_detrended = (datacube/(correction_cube+1e-250)) - 1.
     
     return datacube_detrended
     
