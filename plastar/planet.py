@@ -10,7 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import splev, splrep
 import copy
-from cocofax import genesis
+from crocodel.genesis import genesis
 import pyfastchem
 from . import utils as ut
 
