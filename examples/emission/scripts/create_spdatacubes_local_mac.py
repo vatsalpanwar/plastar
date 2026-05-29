@@ -30,8 +30,8 @@ results_root = '/Users/v.panwar@bham.ac.uk/source/code/plastar/examples/emission
 # dir_name = 'MAIN_emission_eq-chem-ER_planet_phases_rev_dTspot--1100.0_spot_size-0.2_long-0.0_vsini-20.0_crires_2280.0-2330.0-nm'
 # dir_name = 'MAIN_emission_eq-chem-ER_planet_phases_rev_dTspot--1100.0_spot_size-0.2_long-0.0_vsini-3.5_crires_2280.0-2330.0-nm'
 
-# dir_name = 'MAIN_emission_eq-chem-ER_planet_phases_rev_dTspot--1100.0_spot_size-0.2_long-0.0_vsini-20.0_crires_1890.0-2560.0-nm'
-dir_name = 'MAIN_emission_eq-chem-ER_planet_phases_rev_dTspot--1100.0_spot_size-0.2_long-0.0_vsini-3.5_crires_1890.0-2560.0-nm'
+dir_name = 'MAIN_emission_eq-chem-ER_planet_phases_rev_dTspot--1100.0_spot_size-0.2_long-0.0_vsini-20.0_crires_1890.0-2560.0-nm'
+# dir_name = 'MAIN_emission_eq-chem-ER_planet_phases_rev_dTspot--1100.0_spot_size-0.2_long-0.0_vsini-3.5_crires_1890.0-2560.0-nm'
 
 # SNR = 500
 # SNR = 500
